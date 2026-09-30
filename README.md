@@ -15,6 +15,8 @@ Stage artifacts live in `docs/` and are versioned with the code.
 | Document | Stage | Owner |
 |---|---|---|
 | [IDEA_BRIEF.md](docs/IDEA_BRIEF.md) | Intake | Manager |
+| [RESEARCH_BRIEF.md](docs/RESEARCH_BRIEF.md) | Discovery | Researcher |
+| [PRODUCT_BRIEF.md](docs/PRODUCT_BRIEF.md) | Discovery | Product |
 
 ## Clone
 
