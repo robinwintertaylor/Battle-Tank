@@ -5,7 +5,7 @@
 ## 1. Shape
 
 - **Source of truth:** the Buzz relay repo (`origin`). Work lands there by reviewed PR (SEC-12).
-- **GitHub mirror:** `github.com/robinwintertaylor/wireframe-tanks`, public. It only receives one-way pushes from `scripts/mirror.js`. Nobody pushes to it by hand.
+- **GitHub mirror:** `github.com/robinwintertaylor/Battle-Tank`, public. Pages will serve it at `robinwintertaylor.github.io/Battle-Tank/`; `scripts/serve.js` uses the same `/Battle-Tank/` path locally, and every URL in `site/` is relative. The game is still called Wireframe Tanks on screen. It only receives one-way pushes from `scripts/mirror.js`. Nobody pushes to it by hand.
 - **CI:** `.github/workflows/ci.yml` runs on every push to the mirror. It covers lint, typecheck, unit tests with the 90% `core/` coverage gate, the 500 KB size gate, `npm audit`, a gitleaks scan of the full history, and Playwright in Chromium, Firefox and WebKit.
 - **Deploy:** `.github/workflows/deploy-pages.yml` publishes `site/` to Pages through OIDC (ADR 0007, SEC-8). It is **off**.
 
@@ -16,7 +16,7 @@
 | Node.js 22 or later (CI uses 24) | Mirror machine | `npm ci` installs the dev tools |
 | gitleaks 8.30.1 | On `PATH` of the mirror machine | `scripts/mirror.js` refuses to push without it |
 | Fine-grained token | `~/.config/wireframe-tanks/github-mirror-token` (override with `WT_MIRROR_TOKEN_FILE`) | This one repository only. Contents and Workflows set to read and write, nothing else. 90-day expiry (SEC-13). Never in the repo, Buzz, Cortex or logs. |
-| Token file locked to Robin's account | Run once in `cmd` after saving it: `icacls "%USERPROFILE%\.config\wireframe-tanks\github-mirror-token" /inheritance:r /grant:r "%USERNAME%:R"` | Only Robin's Windows account can read it (SEC-13 as amended by Security) |
+| Token file locked to Robin's account | Run once in `cmd` after saving it: `icacls "%USERPROFILE%\.config\wireframe-tanks\github-mirror-token" /inheritance:r /grant:r "%USERNAME%:F"` | Only Robin's Windows account can read it, and he can still overwrite it to rotate (SEC-13 as amended by Security) |
 | GitHub account | Robin | 2FA on, ideally with a passkey (SEC-10) |
 
 ### Repository settings (Robin, once)
@@ -35,7 +35,7 @@ node scripts/mirror.js engineer/some-pr    # plus PR branches, so CI runs before
 
 The script fetches `origin` and pushes only the relay's refs, never a local branch. It scans each ref with gitleaks before pushing (SEC-14) and never force-pushes `main`. PR branches may be force-updated, because they are rebased during review.
 
-**Getting CI on a PR:** after `buzz pr open`, the Engineer mirrors the PR branch. CI results show on that commit at `github.com/robinwintertaylor/wireframe-tanks/actions`. Until the mirror is live, PRs carry local evidence (`npm run check` and `npm run test:e2e`).
+**Getting CI on a PR:** after `buzz pr open`, the Engineer mirrors the PR branch. CI results show on that commit at `github.com/robinwintertaylor/Battle-Tank/actions`. Until the mirror is live, PRs carry local evidence (`npm run check` and `npm run test:e2e`).
 
 **First push (SEC-14):** scan the full history with `gitleaks git --redact .` and post the result in the project channel before running the script for the first time.
 

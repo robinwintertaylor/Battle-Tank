@@ -17,6 +17,13 @@ const networkGlobals = [
   { name: 'EventSource', message: 'No network calls after load (M12).' },
 ];
 
+// The same calls reached through a global object, such as window.fetch.
+const networkProperties = [
+  ...['window', 'self', 'globalThis'].flatMap((object) =>
+    ['fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource'].map((property) => ({ object, property }))),
+  { object: 'navigator', property: 'sendBeacon' },
+].map((rule) => ({ ...rule, message: 'No network calls after load (M12).' }));
+
 // T1 and T3: core/ and the pure render modules stay free of the browser,
 // the clock and unseeded randomness (ARCHITECTURE.md section 2).
 const pureGlobals = [
@@ -60,7 +67,7 @@ export default [
     languageOptions: { globals: browserGlobals },
     rules: {
       'no-undef': 'off',
-      'no-restricted-properties': ['error', ...htmlSinks],
+      'no-restricted-properties': ['error', ...htmlSinks, ...networkProperties],
       'no-restricted-globals': ['error', ...networkGlobals],
       'no-restricted-syntax': ['error', { selector: 'ImportExpression', message: 'Static imports only (ARCHITECTURE.md section 6.3).' }],
     },
@@ -69,7 +76,7 @@ export default [
     files: ['site/src/core/**/*.js', 'site/src/render/scene.js', 'site/src/render/camera.js', 'site/src/render/hud.js'],
     rules: {
       'no-restricted-globals': ['error', ...networkGlobals, ...pureGlobals],
-      'no-restricted-properties': ['error', ...htmlSinks,
+      'no-restricted-properties': ['error', ...htmlSinks, ...networkProperties,
         { object: 'Math', property: 'random', message: 'Use the seeded rng.js (T3).' },
         { object: 'globalThis', message: 'No global access in pure modules (ARCHITECTURE.md section 2).' },
       ],
