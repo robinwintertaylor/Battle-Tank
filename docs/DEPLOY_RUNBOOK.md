@@ -16,7 +16,7 @@
 | Node.js 22 or later (CI uses 24) | Mirror machine | `npm ci` installs the dev tools |
 | gitleaks 8.30.1 | On `PATH` of the mirror machine | `scripts/mirror.js` refuses to push without it |
 | Fine-grained token | `~/.config/wireframe-tanks/github-mirror-token` (override with `WT_MIRROR_TOKEN_FILE`) | This one repository only. Contents and Workflows set to read and write, nothing else. 90-day expiry (SEC-13). Never in the repo, Buzz, Cortex or logs. |
-| Token file locked to Robin's account | Run once in `cmd` after saving it: `icacls "%USERPROFILE%\.config\wireframe-tanks\github-mirror-token" /inheritance:r /grant:r "%USERNAME%:R"` | Only Robin's Windows account can read it (SEC-13 as amended by Security) |
+| Token file locked to Robin's account | Run once in `cmd` after saving it: `icacls "%USERPROFILE%\.config\wireframe-tanks\github-mirror-token" /inheritance:r /grant:r "%USERNAME%:F"` | Only Robin's Windows account can read it, and he can still overwrite it to rotate (SEC-13 as amended by Security) |
 | GitHub account | Robin | 2FA on, ideally with a passkey (SEC-10) |
 
 ### Repository settings (Robin, once)

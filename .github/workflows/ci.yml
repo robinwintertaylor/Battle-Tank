@@ -33,6 +33,8 @@ jobs:
       - run: npm run size
       - name: Audit production dependencies (gate)
         run: npm audit --audit-level=high --omit=dev
+      - name: Audit dev dependencies (gate on critical)
+        run: npm audit --audit-level=critical
       - name: Audit all dependencies (report only)
         run: npm audit || true
 
