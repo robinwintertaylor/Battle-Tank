@@ -1,14 +1,16 @@
 ---
 title: "Wireframe Tanks — requirements"
 tags: [wireframe-tanks, requirements, analyst]
-status: draft, awaiting Product sign-off
+status: revision 2, Product signed off revision 1 (D-83); revision 2 awaiting Product confirmation
 created: 2026-10-01
 ---
 
 # Wireframe Tanks — requirements
 
 **Author:** Analyst. **Date:** 2026-10-01. **Stage:** Requirements and Design (merged).
-**Inputs:** `docs/IDEA_BRIEF.md`, `docs/RESEARCH_BRIEF.md`, `docs/PRODUCT_BRIEF.md`, `docs/THREAT_MODEL.md`, `docs/TEST_STRATEGY.md`, `docs/ARCHITECTURE.md` and ADRs 0001–0008, scope decision D-41.
+**Inputs:** `docs/IDEA_BRIEF.md`, `docs/RESEARCH_BRIEF.md`, `docs/PRODUCT_BRIEF.md`, `docs/THREAT_MODEL.md`, `docs/TEST_STRATEGY.md`, `docs/ARCHITECTURE.md` and ADRs 0001–0008, `docs/UX_SPEC.md`, scope decision D-41.
+
+**Revision 2 (2026-10-01):** applies the Manager's rulings X1–X5 (and the X6 cue in AC-08.5) on the conflicts with `UX_SPEC.md` (`TEST_STRATEGY.md` §10.8): start and restart keys, the 1.5 s game-over delay, the hit feedback timings, and the Loading, Keyboard needed, Error, Quit to title and window-too-small states.
 
 This document turns the product brief into numbered, testable requirements. Every other artifact refers to these numbers. Product-brief IDs (M1–M12, S1–S5, C1–C4) are kept alongside so each requirement traces back to the brief. Security requirements keep the threat model's own IDs (SEC-1 to SEC-23).
 
@@ -51,7 +53,8 @@ This document turns the product brief into numbered, testable requirements. Ever
 | Level | The difficulty level, 1 to K-19, worked out from the score (BR-17). |
 | Grace period | Time after an enemy spawns during which it may not fire (K-12). |
 | Enemy locator | The HUD element that shows the direction of the enemy relative to the player's heading (M8). Its form is the Designer's. |
-| Screen | One of the game states in section 8: Start, Playing, Paused, Respawning, Game over. |
+| Screen | One of the page states in section 8.1: Loading, Keyboard needed, Start, Playing, Paused, Respawning, Destroyed, Game over, Error. |
+| Overlay | An HTML screen drawn over the canvas (Start, Paused, Game over, Keyboard needed, Error; UX-D1). |
 | Simulation step | One fixed tick of game logic, K-15 long. |
 | Game key | Any key the game uses: drive, turn, fire, pause, mute (BR-01). |
 
@@ -81,10 +84,13 @@ This document turns the product brief into numbered, testable requirements. Ever
 | K-20 | Enemy drive speed | 8 u/s (slower than the player) | BR-16 |
 | K-21 | Player spawn point | Arena centre (0, 0), heading 0° | BR-13 |
 | K-22 | Clear radius around the player spawn point | 20 u: no obstacle footprint inside it | BR-06 |
-| K-23 | Hit feedback duration | 0.75 s | US-14 |
+| K-23 | Hit frame flash duration (shown once per hit) | 0.4 s | US-14 |
 | K-24 | Number of obstacles | 12, fixed layout, the same every game | BR-06 |
 | K-25 | Maximum enemies alive at once (`maxEnemies`) | 1 (Phase 2 raises it; ADR 0004) | BR-14 |
 | K-26 | Player reload time (minimum time between player shots) | 0.5 s | BR-08 |
+| K-27 | Delay from losing the last life to the Game over screen | 1.5 s | BR-13 |
+| K-28 | View shake on hit: duration and amplitude | 0.25 s, 6 px | US-14 |
+| K-29 | Minimum playable window size | 640 × 400 CSS px | BR-24, BR-25 |
 
 **Enemy difficulty table (S3).** One row per level. Harder levels turn faster, aim more tightly and reload sooner. Each column must change monotonically, never easier from one level to the next.
 
@@ -149,9 +155,9 @@ These defaults are the Analyst's starting point, not measured values. Product ow
 
 **BR-12 Lives.** A game starts with K-08 lives. Each death removes one. There are no extra lives in the MVP. Lives never go below 0.
 
-**BR-13 Player death and respawn.** On a death, the screen changes to Respawning for K-13, during which the simulation keeps running for effects but all player input except pause and mute is ignored and the enemy does not fire. Any shells in flight are removed at the start of Respawning. Then:
-- If lives remain, the player reappears at K-21 and the enemy is removed and respawned under BR-14 (so the player is never shot on the spot). The screen returns to Playing.
-- If no lives remain, the screen changes to Game over.
+**BR-13 Player death and respawn.** On a death, any shells in flight are removed, the simulation keeps running for effects, all player input except pause and mute is ignored, and the enemy does not fire. Then:
+- If lives remain, the screen is Respawning for K-13. After that the player reappears at K-21 and the enemy is removed and respawned under BR-14 (so the player is never shot on the spot). The screen returns to Playing.
+- If no lives remain, the screen is Destroyed for K-27, then changes to Game over.
 
 **BR-14 Enemy spawn.** Exactly K-25 enemies (one) exist during Playing, except during the K-14 delay after a kill. The first enemy of a game appears at the start. A spawn position must be:
 - at a distance from the player between K-10 and K-11,
@@ -168,15 +174,23 @@ If no valid point is found after 50 random attempts, the furthest valid position
 
 ### Game flow
 
-**BR-18 Start.** The game opens on the Start screen. Any key press except modifier-only keys (`Shift`, `Control`, `Alt`, `Meta`), `Tab` and the function keys `F1`–`F12` starts a new game. The same key press unlocks audio (research §6).
+**BR-18 Start.** The page opens in the Loading state: the Start overlay is shown with its button disabled. When the game is ready, the button is enabled and takes focus. A new game starts on `Enter`, or on activating the focused Start button (with `Space`, `Enter` or a click). No other key starts the game. The same input unlocks audio (research §6). Ruling X1.
 
 **BR-19 New game.** Starting a new game sets score to 0, lives to K-08, level to 1, puts the player at K-21, removes all shells, and spawns the first enemy under BR-14.
 
-**BR-20 Restart.** On the Game over screen, input is ignored for K-17 so that a held fire key does not restart the game by accident. After that, any key accepted by BR-18 starts a new game (BR-19) without reloading the page.
+**BR-20 Restart.** On the Game over screen, input is ignored and both buttons are disabled for K-17, so that a held fire key does not skip the final score. After that, "Play again" takes focus. `Enter` or activating "Play again" starts a new game (BR-19) without reloading the page. `Escape` or activating "Title screen" returns to the Start screen. Ruling X2.
 
-**BR-22 Pause.** Pause stops the simulation clock: no movement, no firing, no timers (grace, reload, respawn) advance. Pause is available from Playing and Respawning. The game also pauses automatically when the page becomes hidden (`visibilitychange`) or the window loses focus (`blur`). Resuming is only by the pause key; it never happens automatically on focus.
+**BR-22 Pause.** Pause stops the simulation clock: no movement, no firing, no timers (grace, reload, respawn) advance. Pause is available from Playing and Respawning. The game also pauses automatically when the page becomes hidden (`visibilitychange`), the window loses focus (`blur`), or the window becomes smaller than K-29 (BR-25). Resuming is only by the pause key or the Resume button; it never happens automatically on focus.
 
 **BR-23 Mute.** The mute key toggles all game sound on and off on every screen. The mute state lasts for the browser session only (not stored).
+
+**BR-24 Keyboard needed.** At load, if `matchMedia('(any-pointer: fine)')` is false or the window is smaller than K-29, the Keyboard needed overlay is shown instead of the Start overlay. It is advice, not a block: "Play anyway" goes to the Start screen. Ruling X5.
+
+**BR-25 Window too small.** While Playing or Respawning, if the window becomes smaller than K-29 in either dimension, the game pauses (BR-22) and the Paused overlay says to make the window larger. Resume is disabled until the window is at least K-29 again. Ruling X5.
+
+**BR-26 Quit to title.** From the Paused screen, "Quit to title" ends the current game and shows the Start screen. A quit game does not update the best score (US-15); only a game that reaches Game over does. Ruling X5.
+
+**BR-27 Error.** If an uncaught error occurs, the game loop stops and the Error overlay is shown with a Reload button. No technical detail is shown on screen; it goes to the console. Ruling X5.
 
 ## 5. User stories and acceptance criteria
 
@@ -186,9 +200,10 @@ If no valid point is found after 50 random attempts, the furthest valid position
 
 As a new player, I want to see the controls and start with one key press, so that I am playing within seconds without reading instructions elsewhere.
 
-- **AC-01.1** Given the page has just loaded, when it finishes loading, then the Start screen shows the game name "Wireframe Tanks", the keys for drive, turn, fire, pause and mute, and a prompt to press a key.
-- **AC-01.2** Given the Start screen, when the player presses a key accepted by BR-18, then a new game starts (BR-19) and the screen changes to Playing.
-- **AC-01.3** Given the Start screen, when the player presses only `Shift`, `Control`, `Alt`, `Meta`, `Tab` or a function key, then the screen stays on Start.
+- **AC-01.1** Given the page has just loaded, when the game is ready, then the Start screen shows the game name "Wireframe Tanks", the keys for drive, turn, fire, pause and sound, a "Start game" button that has focus, and the hint "or press Enter".
+- **AC-01.2** Given the Start screen, when the player presses `Enter`, or presses `Space` while the Start button has focus, then a new game starts (BR-19) and the screen changes to Playing.
+- **AC-01.3** Given the Start screen, when the player presses any other key (for example `KeyW`, `KeyA`, `Shift` or `Tab`), then no game starts; `Tab` moves focus as normal.
+- **AC-01.5** Given the page is still loading its modules, then the Start button is disabled and reads "Loading…", and pressing `Enter` or `Space` starts nothing.
 - **AC-01.4** Given the Start screen, when no key has been pressed, then no sound has played and the audio context, if created, is suspended.
 
 ### US-02 First-person wireframe arena (M2, Must)
@@ -220,9 +235,9 @@ As a player, I want to fire a shell at the enemy, so that I can destroy it.
 
 - **AC-04.1** Given the player has no shell in flight, when Space is pressed, then one shell appears at the player's muzzle and travels along the player's heading at 80 u/s.
 - **AC-04.2** Given the player has a shell in flight, when Space is pressed again, then no second shell is created and no shot is queued.
-- **AC-04.5** Given the player's shell was removed less than 0.5 s after it was fired, when Space is pressed before 0.5 s has passed since that shot, then no shell is fired; a press at or after 0.5 s fires.
 - **AC-04.3** Given Space is held down, when the shell in flight is removed, then no new shell is fired until Space is released and pressed again.
 - **AC-04.4** Given a shell meets nothing, when it has travelled 200 u, then it is removed and the player can fire again.
+- **AC-04.5** Given the player's shell was removed less than 0.5 s after it was fired, when Space is pressed before 0.5 s has passed since that shot, then no shell is fired; a press at or after 0.5 s fires.
 
 ### US-05 Obstacles and arena boundary (M5, Must)
 
@@ -267,6 +282,7 @@ As a player, I want to know which way the enemy is at all times, so that I do no
 - **AC-08.2** Given the enemy is directly behind the player, then the locator shows it behind, distinguishably from in front.
 - **AC-08.3** Given no enemy exists (during the respawn delay), then the locator shows no enemy.
 - **AC-08.4** Given the player turns, then the locator updates in the same frame.
+- **AC-08.5** Given the enemy is out of view, when it fires, then the edge chevron changes to the alert colour for 0.3 s, once per shot, so the shot has a visual cue (NFR-17; ruling X6, UX spec §6.5).
 
 ### US-09 Score, lives, game over and restart (M9, Must)
 
@@ -275,10 +291,12 @@ As a player, I want a score, a set number of lives and a clear end, so that each
 - **AC-09.1** Given a new game, then the HUD shows score 0 and lives 3.
 - **AC-09.2** Given a kill, then the score increases by exactly 100 in the same step.
 - **AC-09.3** Given a death with lives remaining, then lives decrease by 1, the Respawning screen shows for 2.0 s, and the player reappears at the arena centre facing north with a newly spawned enemy.
-- **AC-09.4** Given the player's last life is lost, when 2.0 s has passed, then the Game over screen shows the final score.
-- **AC-09.5** Given the Game over screen has just appeared, when a key is pressed within 1.0 s, then nothing happens.
-- **AC-09.6** Given the Game over screen has shown for more than 1.0 s, when an accepted key is pressed, then a new game starts with score 0 and lives 3, without a page reload.
+- **AC-09.4** Given the player's last life is lost, then the Destroyed screen shows for 1.5 s, and then the Game over screen shows the final score. Ruling X3.
+- **AC-09.5** Given the Game over screen has just appeared, when any key is pressed within 1.0 s, then nothing happens and both buttons are disabled.
+- **AC-09.6** Given the Game over screen has shown for 1.0 s or more, when `Enter` is pressed or "Play again" is activated, then a new game starts with score 0 and lives 3, without a page reload.
 - **AC-09.7** Given player and enemy are hit in the same step, then the score increases by 100 and lives decrease by 1 (BR-21).
+- **AC-09.8** Given the Game over screen has shown for 1.0 s or more, when `Escape` is pressed or "Title screen" is activated, then the Start screen shows.
+- **AC-09.9** Given the Game over screen has shown for 1.0 s or more, then "Play again" has focus.
 
 ### US-10 Pause (S4, Should)
 
@@ -289,7 +307,11 @@ As a player, I want to pause, and have the game pause itself when I switch away,
 - **AC-10.3** Given the Playing screen, when the tab is hidden or the window loses focus, then the game pauses.
 - **AC-10.4** Given the game paused automatically, when focus returns, then it stays paused until the pause key is pressed.
 - **AC-10.5** Given the Paused screen, then it shows how to resume.
-- **AC-10.6** Given the Paused screen, when Space or a drive key is pressed, then nothing in the game changes.
+- **AC-10.6** Given the Paused screen, when Space or a drive key is pressed, then nothing in the game changes (Space may activate the focused button).
+- **AC-10.7** Given the Paused screen opens, then focus is on the pause dialog, not on a button, so a held or pressed Space does not resume; activating "Resume" (after tabbing to it) resumes play as in AC-10.2.
+- **AC-10.8** Given the Paused screen, when "Quit to title" is activated, then the Start screen shows, and the best score is not updated from the quit game (BR-26).
+- **AC-10.9** Given the Playing screen, when the window is resized below 640 × 400, then the game pauses, the Paused screen says "Make the window larger to keep playing.", and Resume is disabled.
+- **AC-10.10** Given the game paused because the window was too small, when the window is made at least 640 × 400, then Resume is enabled, and play stays paused until the player resumes.
 
 ### US-11 Sound effects (S1, Should)
 
@@ -322,7 +344,9 @@ As a player, I want the enemy to get tougher as I score, so that the game stays 
 
 As a player, I want a clear sign when I am hit, so that I understand why I lost a life.
 
-- **AC-14.1** Given the player is destroyed, then a visible hit effect starts in the same frame and lasts 0.75 s (form chosen by the Designer).
+- **AC-14.1** Given the player is destroyed, then in the same frame: an alert-colour frame appears around the view and shows once for 0.4 s (K-23); the view shakes for 0.25 s with a 6 px amplitude (K-28); and a banner appears. Ruling X4.
+- **AC-14.4** Given the player is destroyed with lives left, then the banner reads "HIT · {n} LIVES LEFT" ("HIT · 1 LIFE LEFT" for one) and stays for the whole respawn delay (2.0 s), clearing when play resumes.
+- **AC-14.5** Given the player loses the last life, then the banner reads "DESTROYED" and stays until the Game over screen opens (1.5 s).
 - **AC-14.2** Given the hit effect, then it flashes no more than three times in any one second (NFR-14).
 - **AC-14.3** Given the user's system asks for reduced motion, then the hit effect has no shaking or rapid movement (NFR-16).
 
@@ -350,6 +374,23 @@ As a returning player, I want my best score remembered, so that I have something
 - **AC-18.1** Given a tank is destroyed, then its lines break into fragments that move apart and disappear within 2.0 s.
 - **AC-18.2** Given the explosion, then it meets NFR-14 (no more than three flashes a second).
 
+### US-19 Keyboard needed (Must, ruling X5)
+
+As a visitor on a touch device or a very small window, I want to be told the game needs a keyboard, so that I understand why it may not work for me.
+
+- **AC-19.1** Given `matchMedia('(any-pointer: fine)')` is false at load, then the Keyboard needed screen shows instead of the Start screen, with the text in UX spec §11 (`kbd.*`) and a focused "Play anyway" button.
+- **AC-19.2** Given the window is smaller than 640 × 400 at load, then the Keyboard needed screen shows.
+- **AC-19.3** Given the Keyboard needed screen, when "Play anyway" is activated, then the Start screen shows.
+- **AC-19.4** Given a fine pointer and a window of at least 640 × 400 at load, then the Keyboard needed screen does not show.
+
+### US-20 Error screen (Must, ruling X5)
+
+As a player, I want a plain message if the game breaks, so that I know to reload rather than wait.
+
+- **AC-20.1** Given an uncaught error occurs while Playing or Paused, then the game stops and the Error screen shows "Something went wrong", "The game stopped unexpectedly. Reload the page to play again." and a focused "Reload" button.
+- **AC-20.2** Given the Error screen, then no stack trace, error code or file path appears on screen; the error is logged to the console.
+- **AC-20.3** Given the Error screen, when "Reload" is activated, then the page reloads.
+
 ## 6. Non-functional requirements
 
 | ID | Requirement | Priority | Source | How it is verified |
@@ -366,12 +407,12 @@ As a returning player, I want my best score remembered, so that I have something
 | NFR-10 | **IP: the name.** A case-insensitive search for "battlezone" finds zero matches in the deployed site's files, page title, every `<meta>` tag, the URL path and every on-screen text on every screen. | Must | M11 | E2E-10 and a text search of the build output |
 | NFR-11 | **IP: original assets.** Tank models, obstacles, horizon, HUD layout, lettering and sounds are our own designs. No data is taken from the original game's ROM or other assets. The deployed site contains no audio or font files from a third party. | Must | M11, decision P4 | MAN-IP review by Tester, recorded in the test report; Product accepts |
 | NFR-12 | **Deployed artifact.** The deployed site contains only the files the game needs at runtime. `docs/`, tests, source maps that reveal local paths, and development configuration are not deployed. | Must | M11, SEC-16 | Review of the Pages artifact in CI |
-| NFR-13 | **Keyboard only.** Every action (start, play, pause, resume, mute, restart) works with the keyboard alone; no mouse or pointer is ever required. | Must | Product brief §7 | E2E keyboard-only scenarios |
+| NFR-13 | **Keyboard only.** Every action (start, play, pause, resume, quit to title, mute, restart, play anyway, reload) works with the keyboard alone; no mouse or pointer is ever required. | Must | Product brief §7 | E2E keyboard-only scenarios |
 | NFR-14 | **No harmful flashing.** No effect flashes more than three times in any one-second period (WCAG 2.2 SC 2.3.1). | Must | Test strategy §3.4 | A11Y-FLASH: count flashes from the segment log (T4) |
 | NFR-15 | **Contrast.** Text on every screen has a contrast ratio of at least 4.5:1 against its background (3:1 for large text). The HUD, crosshair and locator have at least 3:1 against the background (WCAG 2.2 SC 1.4.3 and 1.4.11). | Must | Test strategy §3.4 | Check of the Designer's colour tokens, then on screen |
 | NFR-16 | **Reduced motion.** When the user's system sets `prefers-reduced-motion: reduce`, screen shake and similar non-essential motion effects are off. | Should | Accessibility | E2E with reduced motion emulated |
 | NFR-17 | **Sound is never the only cue.** Every event that has a sound (shot, explosion, new enemy) also has a visual cue, so the game is fully playable muted. | Must | Accessibility, S1 | Review against UX spec; E2E with mute on |
-| NFR-18 | **Page basics.** The page has a `<title>` containing "Wireframe Tanks", a `lang` attribute, and the canvas has an accessible name. If the Designer accepts T6, the Start, Paused and Game over screens are HTML and pass axe-core with zero serious or critical violations. | Must | Test strategy §3.4, T6 | A11Y-01 |
+| NFR-18 | **Page basics.** The page has a `<title>` containing "Wireframe Tanks", a `lang` attribute, and the canvas has an accessible name. The Start, Paused, Game over, Keyboard needed and Error screens are HTML (UX-D1, ADR 0005) and pass axe-core with zero serious or critical violations. | Must | Test strategy §3.4, T6, UX A11Y-1 | A11Y-AXE |
 | NFR-19 | **Privacy.** The site sets no cookies, collects no personal data, uses no analytics or tracking, and stores nothing in the browser except the best score (if US-15 is built). | Must | Product brief §5 | E2E: no cookies and at most one storage key after a full game |
 | NFR-20 | **Load time.** With the network throttled to 10 Mbit/s and 40 ms latency and an empty cache, the Start screen is interactive within 2 seconds of navigation. | Should | Product brief metric 2 | E2E with throttling |
 | NFR-21 | **Determinism.** All randomness uses one seedable generator. The same seed and the same timed inputs always produce the same game. | Must | T3 | Unit test: two runs, same seed, identical state log |
@@ -415,16 +456,25 @@ Folded in from `docs/THREAT_MODEL.md` §4. The threat model holds the full wordi
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Start: page load
-    Start --> Playing: accepted key (BR-18), new game (BR-19)
-    Playing --> Paused: P / Esc, tab hidden, window blur (BR-22)
-    Paused --> Playing: P / Esc
-    Playing --> Respawning: player destroyed (BR-13)
-    Respawning --> Paused: P / Esc, tab hidden, window blur
-    Paused --> Respawning: P / Esc (if paused from Respawning)
-    Respawning --> Playing: after K-13, lives > 0
-    Respawning --> GameOver: after K-13, lives = 0
-    GameOver --> Playing: accepted key after K-17 lockout (BR-20)
+    [*] --> Loading: page load
+    Loading --> KeyboardNeeded: no fine pointer or window < K-29 (BR-24)
+    Loading --> Start: modules ready
+    KeyboardNeeded --> Start: Play anyway
+    Start --> Playing: Enter or Start button (BR-18), new game (BR-19)
+    Playing --> Paused: P / Esc, tab hidden, blur, window < K-29 (BR-22, BR-25)
+    Paused --> Playing: P / Esc / Resume
+    Paused --> Start: Quit to title (BR-26)
+    Playing --> Respawning: player destroyed, lives > 0 (BR-13)
+    Respawning --> Paused: P / Esc, tab hidden, blur, window < K-29
+    Paused --> Respawning: resume (if paused from Respawning)
+    Respawning --> Playing: after K-13
+    Playing --> Destroyed: player destroyed, lives = 0 (BR-13)
+    Destroyed --> GameOver: after K-27
+    GameOver --> Playing: Enter or Play again, after K-17 lockout (BR-20)
+    GameOver --> Start: Esc or Title screen (BR-20)
+    Playing --> Error: uncaught error (BR-27)
+    Paused --> Error: uncaught error
+    Error --> [*]: Reload
 ```
 
 ### 8.2 One simulation step
@@ -510,7 +560,7 @@ Requirement → product brief → tests. Test IDs follow `TEST_STRATEGY.md` §10
 
 | Requirement | Product ID | Priority | Business rules | Tests (from test strategy) |
 |---|---|---|---|---|
-| US-01 | M1 | Must | BR-18, BR-19 | E2E-01, E2E-02, A11Y-01 |
+| US-01 | M1 | Must | BR-18, BR-19 | E2E-01, E2E-02, A11Y-AXE |
 | US-02 | M2 | Must | — | UT-PROJ, E2E-02, MAN-IP |
 | US-03 | M3 | Must | BR-01, BR-02, BR-04 | UT-MOVE, E2E-03, MAN-KEYS |
 | US-04 | M4 | Must | BR-01, BR-07, BR-08 | UT-SHELL, E2E-04 |
@@ -519,7 +569,7 @@ Requirement → product brief → tests. Test IDs follow `TEST_STRATEGY.md` §10
 | US-07 | M7 | Must | BR-09, BR-10, BR-14 | UT-HIT, E2E-05 |
 | US-08 | M8 | Must | — | UT-LOC, E2E-02, A11Y-CONTRAST |
 | US-09 | M9 | Must | BR-11, BR-12, BR-13, BR-19, BR-20, BR-21 | UT-SCORE, E2E-05, E2E-06 |
-| US-10 | S4 | Should | BR-22 | UT-LOOP, E2E-07 |
+| US-10 | S4, X5 | Should | BR-22, BR-25, BR-26 | UT-LOOP, E2E-07; AC-10.7 to AC-10.10 new, Tester to number |
 | US-11 | S1 | Should | — | E2E-08, MAN-IP |
 | US-12 | S2 | Should | BR-23 | E2E-08 |
 | US-13 | S3 | Should | BR-17 | UT-DIFF |
@@ -528,6 +578,8 @@ Requirement → product brief → tests. Test IDs follow `TEST_STRATEGY.md` §10
 | US-16 | C2 | Could | — | MAN-IP |
 | US-17 | C3 | Could | — | MAN-IP |
 | US-18 | C4 | Could | — | A11Y-FLASH |
+| US-19 | X5 (UX §5.7) | Must | BR-24 | New, Tester to number |
+| US-20 | X5 (UX §5.8) | Must | BR-27 | New, Tester to number |
 | NFR-01 | Metric 3 | Must | — | PERF-FPS |
 | NFR-02, NFR-03 | M10 | Must | — | UT-LOOP, PERF-HZ |
 | NFR-04 | Metric 4 | Must | — | PERF-SIZE |
@@ -543,7 +595,7 @@ Requirement → product brief → tests. Test IDs follow `TEST_STRATEGY.md` §10
 | NFR-15 | — | Must | — | A11Y-CONTRAST |
 | NFR-16 | — | Should | — | A11Y — new, Tester to number |
 | NFR-17 | S1 | Must | — | E2E-08 with mute — new, Tester to number |
-| NFR-18 | — | Must | — | A11Y-01 |
+| NFR-18 | UX A11Y-1 | Must | — | A11Y-AXE |
 | NFR-19 | §5 | Must | — | E2E storage check — new, Tester to number |
 | NFR-20 | Metric 2 | Should | — | E2E throttled load — new, Tester to number |
 | NFR-21 | T3 | Must | — | UT determinism |
