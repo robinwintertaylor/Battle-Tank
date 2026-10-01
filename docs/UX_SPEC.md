@@ -8,22 +8,23 @@ created: 2026-10-01
 # Wireframe Tanks — UX spec
 
 **Author:** Designer. **Date:** 2026-10-01. **Stage:** Requirements and Design (merged).
-**Inputs:** `docs/PRODUCT_BRIEF.md` (at `260b20a`), `docs/RESEARCH_BRIEF.md`, `docs/ARCHITECTURE.md` and ADRs (at `e5e4cec`), `docs/TEST_STRATEGY.md`, `docs/THREAT_MODEL.md`.
-**Mockup:** `docs/ux/mockup.html`. Open it in a browser and switch screens with the URL hash (`#start`, `#play`, `#model`, `#play-left`, `#reloading`, `#hit`, `#paused`, `#gameover`, `#unsupported`, `#error`). It is a design reference only and is never shipped. Rendered screenshots of every screen at 1280 × 720 are in `docs/ux/screens/`.
+**Inputs:** `docs/PRODUCT_BRIEF.md` (at `260b20a`), `docs/REQUIREMENTS.md` (at `34cab00`), `docs/RESEARCH_BRIEF.md`, `docs/ARCHITECTURE.md` and ADRs (at `e5e4cec`), `docs/TEST_STRATEGY.md`, `docs/THREAT_MODEL.md`.
+**Mockup:** `docs/ux/mockup.html`. Open it in a browser and switch screens with the URL hash (`#start`, `#play`, `#model`, `#grace`, `#aiming`, `#play-left`, `#enemy-fire`, `#reloading`, `#hit`, `#paused`, `#gameover`, `#unsupported`, `#error`). It is a design reference only and is never shipped. Rendered screenshots of every screen at 1280 × 720 are in `docs/ux/screens/`.
 
-`REQUIREMENTS.md` is being written in parallel. Until it lands, this spec refers to the product brief IDs (M1–M12, S1–S5, C1–C4). Game numbers (lives, points, speeds, grace period, respawn time) belong to the Analyst and live in `config.js`; where this spec shows a number in braces, such as `{lives}`, it is a value from there.
+This spec uses the Analyst's IDs from `REQUIREMENTS.md`: screens, business rules (BR-nn), constants (K-nn) and stories (US-nn). Where the two documents disagreed (test strategy §10.8, X1–X6), the Manager ruled for this spec on X1–X5 on 2026-10-01 and Product accepted the extra screens as MVP scope; the Analyst is updating BR-18, BR-20, AC-09.4, AC-14.1 and the screen list to match. X6 is settled in §6.5. Game numbers live in `config.js`; where a number appears in braces, such as `{lives}`, it is the K-value from there. Section 14 maps every story to this spec.
 
 ## 1. Design decisions
 
 | # | Question | Decision | Why |
 |---|---|---|---|
-| UX-D1 | T6 / ADR 0005: screens in HTML or on the canvas? | **HTML over the canvas** for the start, pause, game-over, error and "keyboard needed" screens. Play view and HUD on the canvas. | Real text, focus order and automated axe checks for every screen with words on it. The HUD is a handful of short readouts, so the live region in §9 carries its meaning to assistive technology. |
-| UX-D2 | Enemy locator form (M8) | **Bearing tape** along the bottom centre, plus an **edge chevron** when the enemy is out of view. | The tape answers "which way and how far" in one glance, and the chevron points at the turn. A circular radar is the original game's device, so we avoid it (§7.6). |
-| UX-D3 | Arena edge | **Bounded**, shown by a low fence of posts and a rail. | It agrees with Architect §5.5. Wrapping is invisible in first person and makes the locator lie about distance. |
+| UX-D1 | T6 / ADR 0005: screens in HTML or on the canvas? | **HTML over the canvas** for the Start, Paused and Game over screens, plus the error and "keyboard needed" notices. Play view and HUD on the canvas. | Real text, focus order and automated axe checks for every screen with words on it. The HUD is a handful of short readouts, so the live region in §9 carries its meaning to assistive technology. |
+| UX-D2 | Enemy locator form (M8) | **Bearing tape** along the bottom centre, plus an **edge chevron** when the enemy is out of view. | The tape answers "which way and how far" in one glance, and the chevron points at the turn. A circular radar is the original game's device, so we avoid it (§7.7). |
+| UX-D3 | Arena edge (BR-05, AC-05.7, requirements Q4) | **Bounded**, shown by a low fence of posts and a rail. | It agrees with BR-05 and Architect §5.5. Wrapping is invisible in first person and makes the locator lie about distance. |
 | UX-D4 | Lettering | **System monospace font** for HTML and canvas `fillText`. No vector lettering, no web fonts. | Original by construction, zero bytes, legible, and it satisfies SEC-1. |
 | UX-D5 | Colour | **Cyan world, amber enemy, near-white HUD on near-black.** | Avoids the original's green-and-red overlay look. Cyan against amber differs in hue for the common colour-vision types, and the enemy also differs in shape (§8.3). |
-| UX-D6 | Field of view | **40° vertical** (about 66° horizontal at 16:9). | It shows the enemy at a readable size at 50 m and gives enough side view to steer round obstacles. Architect's projection uses vertical FOV (§5.1); the value goes in `config.js`. |
-| UX-D7 | Accidental restart | **Input lockout of 1 s** when the game-over screen opens. | A player hammering Space when they die must not skip their final score. |
+| UX-D6 | Field of view | **40° vertical** (about 66° horizontal at 16:9). | It shows the enemy at a readable size at 50 u and gives enough side view to steer round obstacles. Architect's projection uses vertical FOV (§5.1); the value goes in `config.js`. |
+| UX-D7 | Starting and restarting (X1, X2) | **Enter**, or Space/Enter on the focused button. Other keys do nothing on Start and Game over. Game over has a K-17 (1.0 s) lockout, made visible: the prompt and buttons appear only when keys work again. | "Any key" would catch screen-reader, browser and mute keys. A player hammering Space when they die must not skip their final score. |
+| UX-D8 | Obstacle layout (BR-06) | The fixed 12-obstacle layout in §7.5. | BR-06 gives the layout to the Designer. |
 
 ## 2. Users and journeys
 
@@ -72,51 +73,53 @@ One page, no navigation, no URLs per screen (SEC-20: the game reads nothing from
 | Layer | Contents |
 |---|---|
 | Canvas (always present) | Play view (world, enemy, shells) and HUD |
-| HTML overlay (one at a time) | Start, Pause, Game over, Keyboard needed, Error |
+| HTML overlay (one at a time) | Start, Paused, Game over, Keyboard needed, Error. Respawning has no overlay; it is a HUD banner (§5.3). |
 | Live region (visually hidden) | Short announcements of state changes (§9) |
 | `<noscript>` | "JavaScript needed" message |
 
 ## 4. Screen flow
 
+This extends requirements §8.1 with the states ruled in scope under X5: Loading, Keyboard needed, Error, Quit to title, Esc to title from Game over, and auto-pause when the window is too small.
+
 ```mermaid
 stateDiagram-v2
   [*] --> Loading
-  Loading --> Unsupported: no fine pointer / window under 640x400
+  Loading --> KeyboardNeeded: no fine pointer or window under 640x400
   Loading --> Start: modules ready
-  Unsupported --> Start: Play anyway
-  Start --> Playing: Start game / Enter
+  KeyboardNeeded --> Start: Play anyway
+  Start --> Playing: Enter, or Start game button
   Playing --> Paused: P, Esc, tab hidden, window blur, window too small
-  Paused --> Playing: Resume / P / Esc
-  Paused --> Start: Quit to title
-  Playing --> PlayerHit: enemy shell hits, lives left > 0
-  PlayerHit --> Playing: respawn delay ends
-  Playing --> Destroyed: enemy shell hits, last life
-  Destroyed --> GameOver: after 1.5 s
-  GameOver --> Playing: Play again / Enter (after 1 s lockout)
-  GameOver --> Start: Title screen / Esc
+  Paused --> Playing: P, Esc, or Resume button
+  Paused --> Start: Quit to title button
+  Playing --> Respawning: player destroyed, lives left
+  Respawning --> Paused: P, Esc, tab hidden, window blur
+  Paused --> Respawning: P or Esc
+  Respawning --> Playing: after K-13
+  Playing --> Destroyed: player destroyed, last life
+  Destroyed --> GameOver: after gameOverDelay (1.5 s)
+  GameOver --> Playing: Enter or Play again, after K-17
+  GameOver --> Start: Esc or Title screen button
   Playing --> Error: uncaught error
-  Paused --> Error: uncaught error
   Error --> [*]: Reload
 ```
 
-### 4.1 Keys by state
+`Destroyed` can be the Analyst's Respawning screen with a different duration and end state, or a separate state; that is a modelling choice for the Analyst and Architect. What the player sees is §5.4.
 
-| Key (`code`) | Start | Playing | Paused | Game over |
+### 4.1 Keys by screen
+
+| Key (`code`) | Start | Playing / Respawning | Paused | Game over |
 |---|---|---|---|---|
-| `Enter` | Start game | — | Activates focused button | Play again (after lockout) |
-| `Space` | Activates focused button (Start game) | Fire | Activates focused button | Activates focused button (after lockout) |
-| `KeyW` / `ArrowUp` | — | Drive forward | — | — |
-| `KeyS` / `ArrowDown` | — | Reverse | — | — |
-| `KeyA` / `ArrowLeft` | — | Turn left | — | — |
-| `KeyD` / `ArrowRight` | — | Turn right | — | — |
-| `KeyP` | — | Pause | Resume | — |
-| `Escape` | — | Pause | Resume | Title screen |
+| `Enter` | Start game | — | Activates a focused button, if the player tabbed to one | Play again (after K-17) |
+| `Space` | Activates the focused Start button | Fire, once per press (BR-01) | Nothing, unless a button has focus (AC-10.6) | Activates the focused button (after K-17) |
+| `KeyW` `KeyS` `KeyA` `KeyD`, arrows | Nothing | Drive and turn (ignored while Respawning) | Nothing (AC-10.6) | Nothing |
+| `KeyP` | Nothing | Pause | Resume | Nothing |
+| `Escape` | Nothing | Pause | Resume | Title screen |
 | `KeyM` | Toggle sound | Toggle sound | Toggle sound | Toggle sound |
-| `Tab` | Moves focus between buttons (browser default) | — | Moves focus | Moves focus |
+| `Tab` | Browser default | — | Moves between Resume and Quit to title | Browser default (after K-17) |
 
-- While playing, the game calls `preventDefault` on Space and the arrow keys so the page never scrolls. In the overlays it does not, so buttons and Tab behave normally.
-- Fire on Space follows the Analyst's rule (press or hold). The visuals in §6.3 work for either.
-- The mute state lasts for the session. It is not stored (nothing beyond the best score goes to `localStorage`).
+- Fire is once per key press: one shell in flight and a K-26 (0.5 s) reload (BR-01, BR-08, Product D-83).
+- While playing, game keys do not trigger browser defaults (BR-01), so Space and the arrows never scroll. Overlays leave Tab and Enter alone.
+- The mute state lasts for the session only (BR-23).
 
 ## 5. Wireframes
 
@@ -124,7 +127,7 @@ The mockup renders all of these at 1280 × 720. ASCII versions are below for rev
 
 ### 5.1 Loading and start (M1)
 
-`index.html` contains the start overlay as static HTML, so it appears with the first paint. Until `main.js` is ready, the button is disabled and reads "Loading…". Then it reads "Start game" and takes focus.
+`index.html` contains the Start overlay as static HTML, so it appears with the first paint. Until `main.js` is ready, the button is disabled and reads "Loading…", and keys do nothing. Then it reads "Start game", becomes active and takes focus, so Enter and Space both start (X1).
 
 ```text
 +------------------------------------------------------------------+
@@ -141,17 +144,17 @@ The mockup renders all of these at 1280 × 720. ASCII versions are below for rev
 |                                                                  |
 |                       [  Start game  ]   <- focused              |
 |                        or press [Enter]                          |
-|                       Best score 12000   <- only if one exists   |
+|                       Best score 1200    <- only if one exists   |
 +------------------------------------------------------------------+
 ```
 
-The background is the arena at the start position, drawn once and dimmed by the overlay. Under reduced motion it stays still; otherwise the camera may turn slowly (one revolution per 60 s).
+The background is the arena at the start position, drawn once and dimmed by the overlay. A slowly turning camera (one revolution per 60 s, still under reduced motion) is polish and sits with the Could items (Product).
 
 ### 5.2 Playing — HUD layout (M2, M4, M8, M9)
 
 ```text
 +------------------------------------------------------------------+
-| SCORE 3000                                          BEST 12000   |
+| SCORE 300                                            BEST 1200   |
 | LIVES 3 /\ /\ /\                           P PAUSE   M SOUND ON  |
 |                                                                  |
 |        ____                                                      |
@@ -169,9 +172,9 @@ The background is the arena at the start position, drawn once and dimmed by the 
 
 | Element | Position | Notes |
 |---|---|---|
-| Score | Top left, 24 px in, baseline 36 px | Label `SCORE` in dim, value in HUD colour, 20 px |
+| Score | Top left, 24 px in, baseline 36 px | Label `SCORE` in dim, value in HUD colour, 20 px (AC-09.1) |
 | Lives | Under score, baseline 62 px | Number plus one outline triangle per life. The number means the count never depends on reading the icons. |
-| Best score (C1) | Top right | Hidden when there is no stored best score or storage fails. Never shows "BEST 0". |
+| Best score (US-15) | Top right | Hidden while the best score is 0, which includes missing or invalid storage (AC-15.3, AC-15.4). Never shows "BEST 0". |
 | Key hints | Under best score | `P PAUSE   M SOUND ON` / `M SOUND OFF`. Doubles as the mute indicator. |
 | Crosshair | Exact centre | §6.3 |
 | Bearing tape | Bottom centre, 56 px above the bottom edge | §6.4 |
@@ -180,55 +183,61 @@ The background is the arena at the start position, drawn once and dimmed by the 
 
 Nothing is drawn in a band of ±60 px around the horizon except the crosshair, so the world stays readable where the action is.
 
-### 5.3 Player hit, lives left (S5)
+### 5.3 Respawning: player destroyed, lives left (BR-13, US-14, X4)
 
 ```text
-+==================================================================+  <- alert-colour frame, 400 ms, once
++==================================================================+  <- alert-colour frame, 400 ms, shown once
 ||                                                                ||
-||                  HIT · 2 LIVES LEFT                            ||  <- banner, alert colour
+||                  HIT · 2 LIVES LEFT                            ||  <- banner, alert colour, for all of K-13
 ||                                                                ||
 ||                         ( · )                                  ||
 ||          view shakes for 250 ms (off with reduced motion)      ||
+||              tape reads SCANNING (enemy removed, AC-08.3)      ||
 +==================================================================+
 ```
 
-Then the respawn delay (Analyst's number). The banner stays for the whole delay. When play resumes the banner clears.
+The banner stays for the whole Respawning time (K-13, 2.0 s), while drive and fire keys are ignored. It clears when the player reappears at the centre. The frame and shake durations are named constants (`hitFrameMs` 400, `hitShakeMs` 250) so Product can tune them in the play test.
 
-### 5.4 Last life lost
+### 5.4 Destroyed: last life lost (X3)
 
-Same frame and shake, banner `DESTROYED`. After 1.5 s the game-over overlay opens.
+Same frame and shake, banner `DESTROYED`. After `gameOverDelay` (1.5 s, a named constant) the Game over overlay opens.
 
-### 5.5 Paused (S4)
+### 5.5 Paused (US-10)
 
 ```text
 +------------------------------------------------------------------+
 |           (frozen frame with HUD, under a dark overlay)          |
 |                             PAUSED                               |
-|                       [   Resume   ]  <- focused                 |
+|                       [    Resume     ]                          |
 |                       [ Quit to title ]                          |
 |                 Press P or Esc to resume                         |
 +------------------------------------------------------------------+
 ```
 
-When the pause was caused by the window being too small, a line is added above the buttons: "Make the window larger to keep playing." Resume stays disabled until the window is big enough again.
+- The overlay is a `role="dialog"` with `aria-modal="true"`, labelled by its heading. When it opens, focus goes to the dialog itself (`tabindex="-1"`), **not** to a button. So Space and the drive keys do nothing (AC-10.6) unless the player deliberately tabs to a button.
+- Quit to title ends the game without recording a score and opens Start (X5).
+- If the pause was caused by the window being too small, a line is added above the buttons: "Make the window larger to keep playing." Resume, P and Esc do nothing until the window is big enough again.
 
-### 5.6 Game over (M9)
+### 5.6 Game over (US-09, US-15)
 
 ```text
 +------------------------------------------------------------------+
 |                           GAME OVER                              |
-|                             14000                                |
-|                        New best score    <- only when true (C1)  |
-|              [ Play again ]  [ Title screen ]                    |
-|                        or press [Enter]                          |
+|                              1400                                |
+|                     Best 1400 · New best score   <- US-15        |
+|                                                                  |
+|              [ Play again ]  [ Title screen ]    <- after K-17   |
+|                        or press [Enter]          <- after K-17   |
 +------------------------------------------------------------------+
 ```
 
-For the first 1 s (UX-D7) both buttons are disabled and key presses are ignored. Then "Play again" takes focus.
+- For K-17 (1.0 s) the buttons and the prompt are hidden and keys are ignored (BR-20). Then they appear together, and focus moves to "Play again" (X2).
+- Esc, or the Title screen button, opens Start.
+- The best line shows `Best {best}` alongside the final score (AC-15.2). "New best score" is added only when this game set it. If US-15 is not built, the line is left out.
 
 ### 5.7 Keyboard needed
 
-Shown instead of the start screen when `matchMedia('(any-pointer: fine)')` is false or the window is under 640 × 400. It is advice, not a block.
+A UI-only notice, not a game screen. Shown instead of the Start screen when `matchMedia('(any-pointer: fine)')` is false or the window is under 640 × 400. It is advice, not a block.
 
 ```text
                          Keyboard needed
@@ -260,16 +269,16 @@ All HUD geometry is in CSS pixels, built by `hud.js` as 2D segments and text ite
 - Plain integers, no leading zeros, no thousands separator (scores stay short).
 - On a kill, the score updates at once. The `+{points}` banner (§6.6) explains the jump.
 
-### 6.2 Best score (C1)
+### 6.2 Best score (US-15)
 
-Read once at start. Updated on the game-over screen when beaten. Hidden on any storage error (SEC-22) with no message to the player.
+Read once at start. Updated when a game ends with a higher score (AC-15.1). Invalid values count as 0 (AC-15.3), and storage errors are silent to the player (AC-15.4).
 
 ### 6.3 Crosshair (M4)
 
 | State | Drawing |
 |---|---|
 | Ready to fire | Four arcs of a 36 px circle with 0.25 rad gaps at 0°, 90°, 180°, 270°, 2 px, HUD colour, plus a 5 px filled centre dot |
-| Shell in flight or reloading | Same circle dashed (3 on, 5 off), HUD-dim colour, no centre dot |
+| Cannot fire: shell in flight (BR-08) or within K-26 of the last shot | Same circle dashed (3 on, 5 off), HUD-dim colour, no centre dot |
 
 The change is shape (dashed, no dot) as well as colour, so it reads without colour vision.
 
@@ -280,22 +289,27 @@ The change is shape (dashed, no dot) as well as colour, so it reads without colo
 - **View bracket:** two 28 px vertical lines in HUD colour at ± half the horizontal field of view, so the player can see when the enemy will be on screen.
 - **Heading notch:** a small upward caret under the centre.
 - **Enemy marker:** filled amber diamond, 14 × 18 px, at `x = centre + (relativeBearing / 180°) × halfWidth`. Directly behind (±180°) it sits at the end on the side the AI is moving towards; if that is unknown, the right end.
-- **Range:** under the caret, `{n} m`, rounded to the nearest metre, 14 px, HUD colour.
-- **No enemy (after a kill, before the next spawn):** no marker, range reads `SCANNING`.
-- **Enemy warning (S1):** while the enemy is in its aim state, an amber ring (2 px, 13 px radius) is drawn round the marker. It pulses (visible 250 ms, hidden 250 ms, 2 Hz) unless reduced motion is set, in which case it is steady.
+- **Range:** under the caret, `{n} m`, the distance in arena units rounded to a whole number (1 u is about a metre, requirements §1), 14 px, HUD colour.
+- **No enemy** (K-14 after a kill, and during Respawning): no marker, range reads `SCANNING` (AC-08.3).
+- **Behind (AC-08.2):** a marker at either end of the tape means behind; a marker near the centre means in front. The two can never be confused because they are at opposite ends of the tape.
+- **New enemy (AC-11.3):** the marker appears and `SCANNING` is replaced by the range. That is the visual pair of the spawn sound (NFR-17).
+- **Enemy aiming (warning):** from the "enemy starts aiming" event until it fires or stops aiming, an amber ring (2 px, 13 px radius) is drawn round the marker. It pulses (visible 250 ms, hidden 250 ms, 2 Hz) unless reduced motion is set, in which case it is steady.
+- **Accuracy (AC-08.1, AC-08.4):** the marker uses the current frame's heading; at 480 px wide, 1 px is 0.75°, well inside ±5°.
 - **Phase 2 note:** with more than one enemy, each gets a marker and the range shows the nearest. Not built now.
 
 ### 6.5 Edge chevron (M8)
 
 When `|relativeBearing|` is more than half the horizontal FOV, an amber chevron (14 × 44 px, 4 px stroke) is drawn 28 px from the left or right edge at vertical centre, pointing outwards on the shorter turning side. It disappears as soon as the enemy is inside the view.
 
+**Enemy fires while out of view (X6, NFR-17):** the chevron switches to the alert colour and an 8 px stroke for 300 ms, once per shot, then returns to normal. The enemy's reload is at least 2.0 s (difficulty table), so this is at most one flash every 2 s (NFR-14). When the enemy is in view its shell is visible instead, and the chevron is not shown.
+
 ### 6.6 Banner messages
 
 | Trigger | Text | Colour | Duration |
 |---|---|---|---|
-| Enemy destroyed | `+{points}` | HUD | 1000 ms |
-| Player hit, lives left | `HIT · {n} LIVES LEFT` (`HIT · 1 LIFE LEFT` for one) | Alert | Respawn delay |
-| Last life lost | `DESTROYED` | Alert | 1500 ms |
+| Enemy destroyed | `+{points}` (K-09) | HUD | 1000 ms |
+| Player destroyed, lives left | `HIT · {n} LIVES LEFT` (`HIT · 1 LIFE LEFT` for one) | Alert | All of Respawning (K-13) |
+| Player destroyed, no lives left | `DESTROYED` | Alert | `gameOverDelay` (1.5 s) |
 | Difficulty step (S3) | none | — | The rising difficulty is felt, not announced, to keep the HUD quiet |
 
 28 px, letter-spacing 0.1 em, centred. One banner at a time; a newer one replaces an older one.
@@ -308,9 +322,9 @@ Architect's debug overlay (frame time, segment count) draws top centre, in HUD-d
 
 ### 7.1 Conventions
 
-- Model space in metres: **+x right, +y up, +z forward** (the way the model faces). The origin is on the ground at the model's centre.
-- Yaw: positive yaw turns clockwise seen from above (from +z towards +x). A world point is `(ox + x·cos θ + z·sin θ, y, oz − x·sin θ + z·cos θ)`.
-- Shells fly at 1.6 m, the barrel height. Eye height is 2.2 m.
+- Model space in arena units (u, treated as metres): **+x right, +y up, +z forward** (the way the model faces). The origin is on the ground at the model's centre.
+- Yaw: positive yaw turns clockwise seen from above (from +z towards +x), matching the requirements' headings (clockwise from +Z, requirements §1). A world point is `(ox + x·cos θ + z·sin θ, y, oz − x·sin θ + z·cos θ)`.
+- Shells fly at 1.6 u, the barrel height. Eye height is 2.2 u.
 - Edges are index pairs into `vertices`.
 
 ### 7.2 Models for `models.js`
@@ -348,21 +362,20 @@ Exported from `docs/ux/mockup.html` (rounded to 1 mm). The mockup builds them fr
 
 The player's own tank is never seen in first person, so it has no model. The lives icon (§5.2) is a plain triangle, not a tank silhouette.
 
-### 7.3 Footprints for collision
+### 7.3 Obstacle footprints
 
-Suggestions for the Analyst and Architect, taken from the art. The numbers belong in `config.js`.
+Tank hit and collision size is K-07 (3 u); the requirements number governs, and the earlier 2.2 u suggestion is withdrawn. The tank model is 6 × 3.6 u, so it sits inside that circle. Obstacle footprints, taken from the art, for `config.js` or `models.js`:
 
 | Model | Footprint |
 |---|---|
-| Tank | Circle, 2.2 m radius (the hull corners poke out slightly; that is fine for play) |
-| Pillar | Circle, 2.5 m radius |
-| Wall | Rotated rectangle, 12 × 1 m |
-| Hedgehog | Circle, 1.9 m radius |
+| Pillar | Circle, 2.5 u radius |
+| Wall | Rectangle, 12 × 1 u, rotated with the obstacle's yaw |
+| Hedgehog | Circle, 1.9 u radius |
 
 ### 7.4 Arena, horizon and scenery
 
 - **Horizon line (M2):** one full-width line at eye level, horizon colour.
-- **Fence (UX-D3):** a post every 25 m along the arena boundary, 1.5 m tall, joined by a rail at 1.5 m. World colour. With a 200 m half-size arena that is 64 posts; scene culling keeps the drawn count low.
+- **Fence (UX-D3, AC-05.7):** built from the config value, not fixed numbers: a post every 25 u along the boundary at ±K-01 (±250 u today), 1.5 u tall, joined by a rail at 1.5 u. World colour. At K-01 = 250 that is 80 posts and 80 rail sections (posts = 8 × K-01 / 25; if K-01 is not a multiple of 25, space the posts evenly at the nearest spacing to 25 u); scene culling keeps the drawn count low. Because tanks stop K-07 short of the boundary, the fence is always at least 3 u ahead when the player is against it, so it stays visible.
 - **Ridge (C2, Could):** a distant line of flat-topped mesas at infinity, so it turns with the view but never gets closer. Points are `[bearing° clockwise from +z, elevation° above the horizon]`, joined in order:
 
 ```js
@@ -371,17 +384,44 @@ Suggestions for the Analyst and Architect, taken from the art. The numbers belon
 
   Screen position: `x = w/2 + f·tan(bearing − yaw)` for points within ±80° of the view direction, `y = h/2 − f·tan(elevation)`.
 
-### 7.5 Enemy states in the art
+### 7.5 Obstacle layout (BR-06, K-22, K-24)
+
+Twelve obstacles, the same every game. Positions are `(x, z)` in u; yaw in degrees clockwise.
+
+| # | Model | x | z | Yaw |
+|---|---|---|---|---|
+| 1 | pillar | 0 | 45 | 0 |
+| 2 | hedgehog | −30 | 25 | 20 |
+| 3 | wall | 40 | 20 | 60 |
+| 4 | hedgehog | 25 | −40 | 45 |
+| 5 | pillar | −55 | −30 | 0 |
+| 6 | wall | −20 | −70 | 0 |
+| 7 | pillar | 80 | 90 | 0 |
+| 8 | hedgehog | −90 | 80 | 10 |
+| 9 | wall | 110 | −60 | 90 |
+| 10 | pillar | −120 | −110 | 0 |
+| 11 | wall | −140 | 20 | 30 |
+| 12 | hedgehog | 150 | 160 | 70 |
+
+Checked with a script against bounding circles (wall counted as a 6.05 u circle):
+
+- Nearest footprint to the centre is 37.2 u away, well clear of K-22 (20 u) (AC-05.6).
+- Smallest gap between any two obstacles is 31.7 u, against a tank width of 6 u, so every open area is reachable (BR-06).
+- Every footprint is at least 90 u inside the boundary.
+
+The first pillar stands straight ahead of the spawn heading, so a new player sees an obstacle in the first frame and learns what the lines mean. The mockup uses this layout.
+
+### 7.6 Enemy states in the art
 
 | State | Drawing |
 |---|---|
-| Spawn grace period (M6) | Enemy drawn **dashed** (6 on, 4 off) in amber: visibly "not yet armed". Needs one extra stroke style in the renderer palette (`enemyGrace`). |
+| Grace period, K-12 (BR-15) | Enemy drawn **dashed** (6 on, 4 off) in amber: visibly "not yet armed". Needs one extra stroke style in the renderer palette (`enemyGrace`). |
 | Normal | Solid amber, 2 px |
-| Destroyed | Disappears at once. With C4, its edges fly apart as fragments for 800 ms, fading out, no flashing. |
+| Destroyed | Disappears at once. With US-18, its edges fly apart as fragments for 800 ms, fading out, no flashing (AC-18.1, AC-18.2). |
 
-### 7.6 Originality checklist (M11, P4)
+### 7.7 Originality checklist (M11, NFR-10, NFR-11)
 
-Tester can use this list for the pre-release IP check. Our design must **not** contain:
+Tester can use this list for the MAN-IP review (NFR-11). Our design must **not** contain:
 
 - the word "Battlezone" anywhere (title, metadata, copy, file names, comments in shipped files);
 - pyramids or cubes as obstacles;
@@ -456,95 +496,99 @@ HTML text uses `rem`, so browser text zoom works. Canvas text uses fixed pixel s
 
 ### 8.6 Motion
 
-| Token | Value | Use | Reduced motion |
+| Constant or token | Value | Use | Reduced motion |
 |---|---|---|---|
-| `--wt-duration-hit-frame` | 400 ms | Alert frame, shown once | Unchanged (not motion) |
-| `--wt-duration-shake` | 250 ms, 6 px | View shake on hit | Off |
-| `--wt-duration-points` | 1000 ms | `+{points}` banner | Unchanged |
-| `--wt-duration-destroyed` | 1500 ms | Before game over opens | Unchanged |
-| `--wt-duration-lockout` | 1000 ms | Game-over input lockout | Unchanged |
-| `--wt-duration-pulse` | 500 ms period | Enemy warning ring | Steady ring |
-| `--wt-duration-attract` | 60 s per turn | Start screen camera | Still |
+| `hitFrameMs` | 400 ms | Alert frame on a hit, shown once (X4) | Unchanged (not motion) |
+| `hitShakeMs` | 250 ms, 6 px | View shake on a hit (X4) | Off (NFR-16, AC-14.3) |
+| `pointsBannerMs` | 1000 ms | `+{points}` banner | Unchanged |
+| `gameOverDelay` | 1500 ms | `DESTROYED` banner before Game over (X3) | Unchanged |
+| K-17 | 1000 ms | Game over input lockout | Unchanged |
+| `aimPulseMs` | 500 ms period | Enemy aiming ring | Steady ring |
+| `enemyShotFlashMs` | 300 ms | Edge chevron when an out-of-view enemy fires (X6) | Unchanged (one flash, no motion) |
+| `--wt-duration-attract` | 60 s per turn | Start screen camera (Could) | Still |
+
+The millisecond values are UI constants for `config.js` next to the K-values; the CSS duration token covers the one effect that lives in HTML.
 
 ## 9. Accessibility (WCAG 2.2 AA)
 
-A real-time first-person shooter cannot be played without sight, and the scope does not ask for that. What we can and must do is make every screen with words on it fully accessible, make the game playable by keyboard alone, and keep the visuals safe and legible. Each requirement has an ID for the Tester's A11Y tests.
+A real-time first-person shooter cannot be played without sight, and the scope does not ask for that. What we can and must do is make every screen with words on it fully accessible, make the game playable by keyboard alone, and keep the visuals safe and legible. Each requirement has an ID for the Tester's tests (test strategy §10.6).
 
 | ID | Requirement | WCAG | How it is checked |
 |---|---|---|---|
-| A11Y-1 | Start, pause, game-over, keyboard-needed and error screens are HTML with a heading, real buttons and no axe serious or critical violations. | 1.3.1, 4.1.2 | axe via Playwright |
+| A11Y-1 | Start, Paused, Game over, Keyboard needed and Error are HTML with a heading, real buttons and no axe serious or critical violations. | 1.3.1, 4.1.2 | axe via Playwright (A11Y-AXE) |
 | A11Y-2 | `<html lang="en-GB">`; `<title>Wireframe Tanks</title>`. | 3.1.1, 2.4.2 | E2E |
-| A11Y-3 | Everything works by keyboard: starting, playing, pausing, resuming, quitting, restarting, muting. No mouse needed. | 2.1.1 | E2E keyboard-only run |
-| A11Y-4 | When an overlay opens, focus moves to its primary button. When it closes, focus returns to the game container (`tabindex="-1"`). Focus never lands on a hidden element. | 2.4.3 | E2E |
+| A11Y-3 | Everything works by keyboard: starting, playing, pausing, resuming, quitting to title, restarting, muting. No mouse needed (NFR-13). | 2.1.1 | E2E keyboard-only run |
+| A11Y-4 | Focus on open: Start and Game over (after K-17) focus their primary button; Paused, Keyboard needed and Error focus the dialog or its only button as in §5. When an overlay closes, focus returns to the game container (`tabindex="-1"`). Focus never lands on a hidden element. | 2.4.3 | E2E |
 | A11Y-5 | Visible focus ring: 3 px `--wt-color-focus` outline, 3 px offset, on every button. | 2.4.7, 2.4.11 | axe + manual |
 | A11Y-6 | Buttons are at least 44 × 44 CSS px. | 2.5.8 (24 px minimum; we exceed it) | E2E bounding box |
-| A11Y-7 | Text contrast at least 4.5:1, HUD graphics at least 3:1 (tokens in §8.1). | 1.4.3, 1.4.11 | Token check + screenshot spot check |
-| A11Y-8 | No colour-only cues: crosshair state, enemy, locator and mute state each have a shape or text difference. | 1.4.1 | Manual, greyscale screenshot |
-| A11Y-9 | Nothing flashes more than 3 times per second. The hit frame shows once per hit; the warning ring pulses at 2 Hz at most. | 2.3.1 | Manual + code review |
-| A11Y-10 | With `prefers-reduced-motion: reduce`: no shake, no pulsing, no start-screen camera turn. | 2.3.3 (AAA, adopted as good practice) | E2E with emulated media |
-| A11Y-11 | Pause is always available (P, Esc) and automatic on tab hide or window blur. | 2.2.2 | E2E |
+| A11Y-7 | Text contrast at least 4.5:1, HUD graphics at least 3:1 (tokens in §8.1, NFR-15). | 1.4.3, 1.4.11 | Token check + screenshot spot check |
+| A11Y-8 | No colour-only cues: crosshair state, enemy, locator, enemy-fire chevron and mute state each have a shape or text difference. | 1.4.1 | Manual, greyscale screenshot |
+| A11Y-9 | Nothing flashes more than 3 times per second (NFR-14): the hit frame shows once per hit, the aiming ring pulses at 2 Hz at most, and the enemy-fire chevron flashes at most once per enemy reload (≥ 2 s). | 2.3.1 | A11Y-FLASH from the segment log + code review |
+| A11Y-10 | With `prefers-reduced-motion: reduce`: no shake, no pulsing, no start-screen camera turn (NFR-16). | 2.3.3 (AAA, adopted as good practice) | E2E with emulated media |
+| A11Y-11 | Pause is always available (P, Esc) and automatic on tab hide or window blur (BR-22). | 2.2.2 | E2E |
 | A11Y-12 | Single-key controls (W, A, S, D, P, M, Space) act only while the game page has focus and never while focus is in a text field (there are none). | 2.1.4 | Code review |
 | A11Y-13 | A visually hidden `role="status"` (`aria-live="polite"`) region announces state changes only: "Game started. {lives} lives.", "Enemy destroyed. Score {score}.", "Hit. {n} lives left.", "Paused.", "Game over. Final score {score}." It never updates per frame. | 4.1.3 | E2E reads the region text |
-| A11Y-14 | Canvas has `role="img"` and `aria-label="Wireframe Tanks game view"`. | 1.1.1 | axe |
+| A11Y-14 | Canvas has `role="img"` and `aria-label="Wireframe Tanks game view"` (NFR-18). | 1.1.1 | axe |
 | A11Y-15 | Overlay text reflows without horizontal scrolling down to 320 CSS px wide and at 200% text zoom. | 1.4.4, 1.4.10 | E2E at 320 px viewport |
-| A11Y-16 | Every sound (S1) has a visual equivalent: shot (shell appears), explosion (enemy disappears, `+{points}`), enemy warning (locator ring). Sound can be muted with M. | 1.4.2 | Manual |
+| A11Y-16 | Every sound has a visual equivalent (NFR-17), as listed in §12. Sound can be muted with M. | 1.4.2 | E2E-15 + manual |
 | A11Y-17 | Error messages say what happened and what to do, in plain words, with no codes. | 3.3.1 | Manual |
 
 ## 10. Component inventory and states
 
 | Component | Layer | States |
 |---|---|---|
-| Start overlay | HTML | Loading (button disabled, "Loading…"); ready (button "Start game", focused); with/without best score |
-| Pause overlay | HTML | Normal; window too small (message, Resume disabled) |
-| Game-over overlay | HTML | Lockout (buttons disabled, 1 s); ready (Play again focused); new best / not new best |
-| Keyboard-needed overlay | HTML | One state |
+| Start overlay | HTML | Loading (button disabled, "Loading…"); ready (button "Start game", focused); with or without best score |
+| Paused overlay | HTML | Normal; window too small (message, resume blocked) |
+| Game over overlay | HTML | Lockout (buttons and prompt hidden, K-17); ready (Play again focused); new best or not |
+| Keyboard needed overlay | HTML | One state |
 | Error overlay | HTML | One state |
 | `<noscript>` message | HTML | One state |
 | Live region | HTML | Empty; last announcement |
-| Game view | Canvas | Attract (behind start, dimmed); playing; frozen (behind pause, game over) |
+| Game view | Canvas | Attract (behind Start, dimmed); playing; frozen (behind Paused and Game over) |
 | Score readout | Canvas | Value |
-| Lives readout | Canvas | 1–{lives} |
-| Best score | Canvas | Shown; hidden (none stored or storage error) |
-| Key hints / mute indicator | Canvas | Sound on; sound off |
-| Crosshair | Canvas | Ready; reloading |
-| Bearing tape | Canvas | Enemy in view; enemy out of view; enemy behind; no enemy (SCANNING); warning ring |
-| Edge chevron | Canvas | Hidden; left; right |
+| Lives readout | Canvas | 1 to K-08 |
+| Best score | Canvas | Shown; hidden (best is 0) |
+| Key hints / mute indicator | Canvas | Sound on; sound off (AC-12.3) |
+| Crosshair | Canvas | Ready; cannot fire |
+| Bearing tape | Canvas | Enemy in view; out of view; behind; no enemy (SCANNING); aiming ring |
+| Edge chevron | Canvas | Hidden; left; right; enemy-fire flash |
 | Banner | Canvas | Hidden; points; hit; destroyed |
-| Hit frame | Canvas | Hidden; shown (400 ms) |
-| Enemy tank | Canvas | Grace (dashed); armed; destroyed (C4 fragments) |
+| Hit frame | Canvas | Hidden; shown (`hitFrameMs`) |
+| Enemy tank | Canvas | Grace (dashed); armed; destroyed (US-18 fragments) |
 
-Empty, loading and error states for the whole app: loading is §5.1, empty is "no enemy" on the tape and "no best score" (hidden), errors are §5.7–5.9 plus storage failure (silent, §6.2).
+Empty, loading and error states for the whole app: loading is §5.1; empty is "no enemy" on the tape and "no best score" (hidden); errors are §5.7 to §5.9 plus storage failure (silent, §6.2).
 
 ## 11. Copy
 
-**Voice:** short, plain, calm. British English. No exclamation marks, no jokes in error messages, no jargon. HUD labels and headings in upper case; sentences in sentence case. Every string below is the full list; anything else needs a Designer review. Strings are set with `textContent` (SEC-19).
+**Voice:** short, plain, calm. British English. No exclamation marks, no jokes in error messages, no jargon. HUD labels and headings in upper case; sentences in sentence case. This is the full list; anything else needs a Designer review. Strings are set with `textContent` (SEC-19).
 
 | ID | Where | Text |
 |---|---|---|
-| `title` | `<title>`, start heading | Wireframe Tanks (heading styled upper case with CSS) |
+| `title` | `<title>`, Start heading | Wireframe Tanks (heading styled upper case with CSS) |
 | `meta.description` | `<meta name="description">` | A free first-person wireframe tank duel that runs in your browser. |
 | `start.tagline` | Start | One tank. One rival. Find it before it finds you. |
 | `start.keys.*` | Start | Drive / Turn / Fire / Pause / Sound, with the keys in §5.1 |
 | `start.button.loading` | Start | Loading… |
 | `start.button` | Start | Start game |
 | `start.hint` | Start | or press Enter |
-| `start.best` | Start | Best score {score} |
+| `start.best` | Start | Best score {best} |
 | `hud.score` | HUD | SCORE |
 | `hud.lives` | HUD | LIVES |
-| `hud.best` | HUD | BEST {score} |
+| `hud.best` | HUD | BEST {best} |
 | `hud.hints.on` / `.off` | HUD | P PAUSE   M SOUND ON / P PAUSE   M SOUND OFF |
 | `hud.range` | HUD | {n} m |
 | `hud.scanning` | HUD | SCANNING |
 | `banner.points` | HUD | +{points} |
 | `banner.hit` | HUD | HIT · {n} LIVES LEFT / HIT · 1 LIFE LEFT |
 | `banner.destroyed` | HUD | DESTROYED |
-| `pause.heading` | Pause | PAUSED |
-| `pause.resume` | Pause | Resume |
-| `pause.quit` | Pause | Quit to title |
-| `pause.hint` | Pause | Press P or Esc to resume |
-| `pause.small` | Pause | Make the window larger to keep playing. |
+| `pause.heading` | Paused | PAUSED |
+| `pause.resume` | Paused | Resume |
+| `pause.quit` | Paused | Quit to title |
+| `pause.hint` | Paused | Press P or Esc to resume |
+| `pause.small` | Paused | Make the window larger to keep playing. |
 | `over.heading` | Game over | GAME OVER |
-| `over.best` | Game over | New best score |
+| `over.best` | Game over | Best {best} |
+| `over.newBest` | Game over | New best score |
 | `over.again` | Game over | Play again |
 | `over.title` | Game over | Title screen |
 | `over.hint` | Game over | or press Enter |
@@ -557,53 +601,60 @@ Empty, loading and error states for the whole app: loading is §5.1, empty is "n
 | `noscript` | `<noscript>` | Wireframe Tanks needs JavaScript. Turn it on and reload the page. |
 | `live.*` | Live region | See A11Y-13 |
 
-## 12. Audio cues (S1, S2, C3)
+The range shows "m" because 1 u is treated as a metre (requirements §1); players read metres more easily than units.
+
+## 12. Audio cues and their visual pairs (US-11, US-12, US-17, NFR-17)
 
 Sound design is the Developer's, synthesised by hand (ADR 0006). The UX rules:
 
 | Event | Sound | Visual pair |
 |---|---|---|
-| Player fires | Short low thump | Shell leaves the centre; crosshair goes to reloading |
-| Enemy fires | Higher, thinner thump, panned towards the enemy's bearing | Enemy shell visible if in view |
-| Enemy enters aim state (warning) | Two short rising blips, at most once per aim | Ring on the locator marker |
-| Enemy spawns | One soft ping | Marker appears on the tape |
-| Enemy destroyed | Noise burst falling in pitch | Enemy disappears, `+{points}` |
-| Player hit | Low crunch | Alert frame, banner |
-| Engine (C3) | Quiet hum, pitch follows speed | — |
+| Player fires | Short low thump | Shell leaves the centre; crosshair goes to "cannot fire" |
+| Enemy fires, in view | Higher, thinner thump, panned towards the enemy | Enemy shell visible |
+| Enemy fires, out of view | Same, panned | Edge chevron flash (§6.5, X6) |
+| Enemy spawns (AC-11.3 warning) | One soft rising ping | Marker appears on the tape, SCANNING clears |
+| Enemy starts aiming | Two short blips, at most once per aim | Aiming ring on the marker (§6.4) |
+| Tank destroyed | Noise burst falling in pitch | Enemy disappears and `+{points}`; or hit frame and banner for the player |
+| Engine (US-17) | Quiet hum, pitch follows speed | The view moving |
 
-All sounds start only after the first key press or click (research §6). Master volume stays moderate; nothing is louder than the explosion.
+All sounds start only after the first key press or click (AC-01.4). Nothing is louder than the explosion.
 
 ## 13. Dependencies on other lanes
 
 | For | Item |
 |---|---|
-| Analyst | Numbers for `{lives}`, `{points}`, the respawn delay, the spawn grace period and the arena size (the fence and mockup assume a 200 m half-size). Fire on press or hold: the UX works with either. Arena: bounded (UX-D3). |
-| Architect | ADR 0005 can move to Accepted (UX-D1). Add `enemyGrace` (dashed) and per-key line widths to the palette (§8.2). Vertical FOV 40° in `config.js` (UX-D6). Read tokens from CSS at start-up (§8). The live region and the "window too small" pause are small additions to `screens.js` and `main.js`. |
-| Tester | A11Y-1 to A11Y-17 for the A11Y tests; the originality checklist in §7.6 for the M11 check. |
-| Product | Review against the brief and sign off. |
+| Analyst | X1–X5 per the Manager's rulings: BR-18 (Enter or focused button), BR-20 (Enter or focused button after K-17; Esc to Start), AC-09.4 (`gameOverDelay` 1.5 s), AC-14.1 (`hitFrameMs` 400, `hitShakeMs` 250, banner for K-13), and criteria for Loading, Keyboard needed, Error, Quit to title and the too-small auto-pause. |
+| Architect | ADR 0005 can move to Accepted (UX-D1). Palette entries `enemyGrace` (dashed) and per-key line widths (§8.2). Vertical FOV 40° in `config.js` (UX-D6). Read tokens from CSS at start-up (§8). The "enemy starts aiming" and "enemy fired" events drive §6.4 and §6.5. Fence posts are generated from K-01 (§7.4). Obstacle layout and footprints from §7.3 and §7.5 go into `config.js` or `models.js`. |
+| Tester | A11Y-1 to A11Y-17; the originality checklist in §7.7 for MAN-IP; X6 is answered in §6.5 for E2E-15. |
+| Product | Review and sign-off. Visual timings are named constants for the play test. |
 
-## 14. Traceability to the product brief
+## 14. Traceability to the requirements
 
-| Brief ID | Spec sections |
+| Story or requirement | Spec sections |
 |---|---|
-| M1 Start screen | §5.1, §11 |
-| M2 Wireframe arena, horizon | §7.2, §7.4 |
-| M3 Movement controls | §4.1, J5 |
-| M4 Fire, one shell | §6.3 |
-| M5 Obstacles | §7.2, §7.3 |
-| M6 Enemy, grace period | §7.2, §7.5 |
-| M7 Hits, new enemy | §6.4 (SCANNING), §6.6, §7.5 |
-| M8 Enemy locator | UX-D2, §6.4, §6.5 |
-| M9 Score, lives, game over, restart | §5.2, §5.6, §6.1, UX-D7 |
-| M10 Same speed at any refresh rate | No UX change (Architect ADR 0003) |
-| M11 Original name and art | UX-D4, UX-D5, §7.6, §11 |
-| M12 No network calls | System font only (UX-D4); no images, fonts or audio files |
-| S1 Sound effects | §12, A11Y-16 |
-| S2 Mute | §4.1, §5.2 hints, §11 |
-| S3 Rising difficulty | §6.6 (not announced) |
-| S4 Pause, auto-pause | §4, §5.5, A11Y-11 |
-| S5 Hit feedback | §5.3, §8.6, A11Y-9 |
-| C1 Best score | §5.1, §5.6, §6.2 |
-| C2 Horizon scenery | §7.4 ridge |
-| C3 Engine sound | §12 |
-| C4 Explosion fragments | §7.5 |
+| US-01 Start screen (M1) | §5.1, §4.1, §11 |
+| US-02 Wireframe arena (M2) | §7.1, §7.2, §7.4 |
+| US-03 Drive and turn (M3) | §4.1, J5 |
+| US-04 Fire (M4) | §4.1, §6.3 |
+| US-05 Obstacles and boundary (M5) | §7.2, §7.3, §7.4 fence (AC-05.7), §7.5 layout (BR-06, AC-05.6) |
+| US-06 Enemy tank (M6) | §7.2, §7.6 grace period |
+| US-07 Hits and next enemy (M7) | §6.4 SCANNING, §6.6, §7.6 |
+| US-08 Enemy locator (M8) | UX-D2, §6.4, §6.5 |
+| US-09 Score, lives, game over (M9) | §5.2, §5.4, §5.6, §6.1, UX-D7 |
+| US-10 Pause (S4) | §4, §5.5, A11Y-11 |
+| US-11 Sound effects (S1) | §12 |
+| US-12 Mute (S2) | §4.1, §5.2 hints, §11 |
+| US-13 Rising difficulty (S3) | §6.6 (not announced) |
+| US-14 Hit feedback (S5) | §5.3, §8.6, A11Y-9, A11Y-10 |
+| US-15 Best score (C1) | §5.1, §5.6, §6.2 |
+| US-16 Horizon scenery (C2) | §7.4 ridge |
+| US-17 Engine sound (C3) | §12 |
+| US-18 Wireframe explosion (C4) | §7.6 |
+| NFR-10, NFR-11 IP | UX-D4, UX-D5, §7.7, §11 |
+| NFR-13 Keyboard only | §4.1, A11Y-3 |
+| NFR-14 No harmful flashing | A11Y-9 |
+| NFR-15 Contrast | §8.1, A11Y-7 |
+| NFR-16 Reduced motion | §8.6, A11Y-10 |
+| NFR-17 Sound never the only cue | §12, A11Y-16 |
+| NFR-18 Page basics | UX-D1, A11Y-1, A11Y-2, A11Y-14 |
+| M10, M12 / NFR-02 to NFR-06 | No UX change; system font only, no image, font or audio files |

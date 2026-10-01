@@ -7,7 +7,7 @@
 <!--
   Low-fidelity mockup for docs/UX_SPEC.md. Not production code.
   Open the file in a browser and change the hash to switch screens:
-    #start  #play  #model  #play-left  #reloading  #hit  #paused  #gameover  #unsupported  #error
+    #start  #play  #model  #grace  #aiming  #play-left  #enemy-fire  #reloading  #hit  #paused  #gameover  #unsupported  #error
   The model data in MODELS is the reference line art for the game (UX_SPEC.md §7).
   Inline script and styles are fine here because this file is never shipped (SEC-18 applies to the built site).
 -->
@@ -112,14 +112,13 @@ const RIDGE = [[0,0],[12,0],[14,2.2],[24,2.2],[26,0],[60,0],[63,1.4],[66,1.7],[7
 
 // ---------- Mockup scene ----------
 const state = (location.hash || '#play').slice(1);
-const ARENA_HALF = 200, EYE = 2.2, VFOV = 40 * Math.PI / 180; // vertical field of view, as in ARCHITECTURE.md §5.1
-const cam = { x: 0, z: 0, yaw: state === 'play-left' ? 0.9 : 0 }; // yaw: radians, 0 = +z, positive turns right
-const enemy = state === 'model' ? { x: 0, z: 13, yaw: Math.PI - 0.7 } : { x: 9, z: 48, yaw: Math.PI + 0.35 };
-const objects = [
-  { m: 'pillar', x: -22, z: 70, yaw: 0 }, { m: 'wall', x: 30, z: 95, yaw: 0.5 },
-  { m: 'hedgehog', x: -7, z: 28, yaw: 0.3 }, { m: 'pillar', x: 55, z: 150, yaw: 0 },
-  { m: 'hedgehog', x: -60, z: 120, yaw: 1.1 }, { m: 'wall', x: -35, z: 180, yaw: -0.2 },
-];
+const ARENA_HALF = 250 /* K-01 */, EYE = 2.2, VFOV = 40 * Math.PI / 180; // vertical field of view, as in ARCHITECTURE.md §5.1
+const cam = { x: 0, z: 0, yaw: ['play-left', 'enemy-fire'].includes(state) ? 0.9 : 0 }; // yaw: radians, 0 = +z, positive turns right
+const enemy = state === 'model' ? { x: 0, z: 13, yaw: Math.PI - 0.7 } : { x: 16, z: 72, yaw: Math.PI + 0.35 };
+// Obstacle layout from UX_SPEC.md §7.5 (yaw in degrees there, radians here)
+const LAYOUT = [['pillar',0,45,0],['hedgehog',-30,25,20],['wall',40,20,60],['hedgehog',25,-40,45],['pillar',-55,-30,0],['wall',-20,-70,0],
+  ['pillar',80,90,0],['hedgehog',-90,80,10],['wall',110,-60,90],['pillar',-120,-110,0],['wall',-140,20,30],['hedgehog',150,160,70]];
+const objects = LAYOUT.map(([m, x, z, deg]) => ({ m, x, z, yaw: deg * Math.PI / 180 }));
 const cv = document.getElementById('game'), ctx = cv.getContext('2d');
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 
@@ -167,7 +166,8 @@ function draw() {
   // Player shell in flight
   if (state === 'reloading') { ctx.beginPath(); model('shell', { x: 3, y: 1.6, z: 30, yaw: 0 }); ctx.stroke(); }
   // Enemy
-  ctx.strokeStyle = css('--wt-color-enemy'); ctx.lineWidth = 2; ctx.beginPath(); model('tank', enemy); ctx.stroke();
+  ctx.strokeStyle = css('--wt-color-enemy'); ctx.lineWidth = 2; ctx.setLineDash(state === 'grace' ? [6, 4] : []);
+  ctx.beginPath(); model('tank', enemy); ctx.stroke(); ctx.setLineDash([]);
   ctx.restore();
 
   // ---------- HUD graphics ----------
@@ -193,13 +193,15 @@ function draw() {
   const ex = enemy.x - cam.x, ez = enemy.z - cam.z;
   let rel = Math.atan2(ex, ez) - cam.yaw; rel = Math.atan2(Math.sin(rel), Math.cos(rel));
   const mx = cx + rel / Math.PI * tw / 2;
+  if (state === 'aiming') { ctx.strokeStyle = amber; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(mx, ty, 13, 0, 2 * Math.PI); ctx.stroke(); }
   ctx.fillStyle = amber; ctx.beginPath(); ctx.moveTo(mx, ty - 9); ctx.lineTo(mx + 7, ty); ctx.lineTo(mx, ty + 9); ctx.lineTo(mx - 7, ty); ctx.closePath(); ctx.fill();
   ctx.font = `14px ${css('--wt-font')}`; ctx.textAlign = 'center'; ctx.fillStyle = hud;
   ctx.fillText(`${Math.round(Math.hypot(ex, ez))} m`, cx, ty + 40);
   // Off-screen chevron at the screen edge on the shorter turn side
   if (Math.abs(rel) > HFOV / 2) {
     const right = rel > 0, x0 = right ? W - 28 : 28, d = right ? -1 : 1;
-    ctx.strokeStyle = amber; ctx.lineWidth = 4; ctx.beginPath();
+    const fired = state === 'enemy-fire'; // X6: alert colour and 8 px for 300 ms when an out-of-view enemy fires
+    ctx.strokeStyle = fired ? css('--wt-color-alert') : amber; ctx.lineWidth = fired ? 8 : 4; ctx.beginPath();
     ctx.moveTo(x0 + d * 14, cy - 22); ctx.lineTo(x0, cy); ctx.lineTo(x0 + d * 14, cy + 22); ctx.stroke();
   }
   // HUD text (canvas fillText, system monospace)
@@ -208,12 +210,12 @@ function draw() {
     ctx.textAlign = 'left'; ctx.font = `14px ${css('--wt-font')}`; ctx.fillStyle = dim;
     ctx.fillText('SCORE', 24, 36); ctx.fillText('LIVES', 24, 62);
     ctx.font = `20px ${css('--wt-font')}`; ctx.fillStyle = hud;
-    ctx.fillText('3000', 84, 37); ctx.fillText(String(lives), 84, 63);
+    ctx.fillText('300', 84, 37); ctx.fillText(String(lives), 84, 63);
     ctx.strokeStyle = hud; ctx.lineWidth = 2; ctx.beginPath();
     for (let i = 0; i < lives; i++) { const x = 112 + i * 18; ctx.moveTo(x, 62); ctx.lineTo(x + 6, 50); ctx.lineTo(x + 12, 62); ctx.closePath(); }
     ctx.stroke();
     ctx.textAlign = 'right'; ctx.font = `14px ${css('--wt-font')}`; ctx.fillStyle = dim;
-    ctx.fillText('BEST 12000', W - 24, 36); ctx.fillText('P PAUSE   M SOUND ON', W - 24, 58);
+    ctx.fillText('BEST 1200', W - 24, 36); ctx.fillText('P PAUSE   M SOUND ON', W - 24, 58);
   }
   // Hit feedback: alert-coloured frame, one pulse only (no repeated flashing)
   if (state === 'hit') { ctx.strokeStyle = css('--wt-color-alert'); ctx.lineWidth = 10; ctx.strokeRect(5, 5, W - 10, H - 10); }
@@ -221,7 +223,6 @@ function draw() {
 
 // ---------- DOM overlays and HUD text ----------
 const ui = document.getElementById('ui');
-const HUD = () => '';
 const KEYS = `<dl class="keys">
   <dt>Drive</dt><dd><kbd>W</kbd> <kbd>S</kbd> or <kbd>↑</kbd> <kbd>↓</kbd></dd>
   <dt>Turn</dt><dd><kbd>A</kbd> <kbd>D</kbd> or <kbd>←</kbd> <kbd>→</kbd></dd>
@@ -231,14 +232,14 @@ const KEYS = `<dl class="keys">
 const screens = {
   start: `<div class="overlay"><div class="panel">
     <h1>WIREFRAME TANKS</h1><p class="tagline">One tank. One rival. Find it before it finds you.</p>${KEYS}
-    <button class="btn" autofocus>Start game</button><p class="hint">or press <kbd>Enter</kbd></p><p class="hint">Best score 12000</p></div></div>`,
-  play: HUD(3000, 3), 'play-left': HUD(3000, 3), reloading: HUD(3000, 3),
-  hit: HUD(3000, 2) + `<div class="banner banner--alert" aria-hidden="true">HIT · 2 LIVES LEFT</div>`,
-  paused: HUD(3000, 3) + `<div class="overlay"><div class="panel"><h2>PAUSED</h2>
-    <button class="btn" autofocus>Resume</button><button class="btn btn--secondary">Quit to title</button>
+    <button class="btn" autofocus>Start game</button><p class="hint">or press <kbd>Enter</kbd></p><p class="hint">Best score 1200</p></div></div>`,
+  play: '', 'play-left': '', reloading: '', grace: '', aiming: '', 'enemy-fire': '', model: '',
+  hit: `<div class="banner banner--alert" aria-hidden="true">HIT · 2 LIVES LEFT</div>`,
+  paused: `<div class="overlay"><div class="panel"><h2>PAUSED</h2>
+    <button class="btn">Resume</button><button class="btn btn--secondary">Quit to title</button>
     <p class="hint">Press <kbd>P</kbd> or <kbd>Esc</kbd> to resume</p></div></div>`,
   gameover: `<div class="overlay"><div class="panel"><h2>GAME OVER</h2>
-    <p class="score-big">14000</p><p>New best score</p>
+    <p class="score-big">1400</p><p>Best 1400 · New best score</p>
     <button class="btn" autofocus>Play again</button><button class="btn btn--secondary">Title screen</button>
     <p class="hint">or press <kbd>Enter</kbd></p></div></div>`,
   unsupported: `<div class="overlay"><div class="panel"><h2>Keyboard needed</h2>
