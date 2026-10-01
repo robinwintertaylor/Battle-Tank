@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wireframe Tanks — UX mockup</title>
+<!--
+  Low-fidelity mockup for docs/UX_SPEC.md. Not production code.
+  Open the file in a browser and change the hash to switch screens:
+    #start  #play  #model  #play-left  #reloading  #hit  #paused  #gameover  #unsupported  #error
+  The model data in MODELS is the reference line art for the game (UX_SPEC.md §7).
+  Inline script and styles are fine here because this file is never shipped (SEC-18 applies to the built site).
+-->
+<style>
+  :root {
+    --wt-color-bg: #070A12;
+    --wt-color-overlay: rgba(7, 10, 18, 0.88);
+    --wt-color-world: #3FC9DB;
+    --wt-color-horizon: #2F9FB0;
+    --wt-color-enemy: #FFB547;
+    --wt-color-text: #E3F6F8;
+    --wt-color-text-dim: #8FB3BC;
+    --wt-color-alert: #FF6B81;
+    --wt-color-focus: #FFE066;
+    --wt-font: ui-monospace, "Cascadia Mono", Consolas, Menlo, "DejaVu Sans Mono", monospace;
+    --wt-space-1: 4px; --wt-space-2: 8px; --wt-space-3: 12px; --wt-space-4: 16px;
+    --wt-space-6: 24px; --wt-space-8: 32px; --wt-space-12: 48px;
+    --wt-text-sm: 0.875rem; --wt-text-md: 1rem; --wt-text-lg: 1.25rem;
+    --wt-text-xl: 1.75rem; --wt-text-title: clamp(2rem, 6vw, 3.5rem);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--wt-color-bg); color: var(--wt-color-text); font-family: var(--wt-font); }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .hud { position: fixed; top: var(--wt-space-4); font-size: var(--wt-text-lg); letter-spacing: 0.05em; pointer-events: none; }
+  .hud--left { left: var(--wt-space-6); }
+  .hud--right { right: var(--wt-space-6); text-align: right; font-size: var(--wt-text-sm); color: var(--wt-color-text-dim); }
+  .hud__label { font-size: var(--wt-text-sm); color: var(--wt-color-text-dim); margin-right: var(--wt-space-2); }
+  .hud__row + .hud__row { margin-top: var(--wt-space-1); }
+  .banner { position: fixed; left: 50%; top: 32%; transform: translateX(-50%); font-size: var(--wt-text-xl); letter-spacing: 0.1em; }
+  .banner--alert { color: var(--wt-color-alert); }
+  .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: var(--wt-color-overlay); padding: var(--wt-space-6); }
+  .panel { max-width: 36rem; text-align: center; }
+  .panel h1 { font-size: var(--wt-text-title); letter-spacing: 0.12em; margin: 0 0 var(--wt-space-2); font-weight: 700; }
+  .panel h2 { font-size: var(--wt-text-xl); letter-spacing: 0.1em; margin: 0 0 var(--wt-space-6); }
+  .panel p { margin: 0 0 var(--wt-space-4); line-height: 1.5; }
+  .tagline { color: var(--wt-color-text-dim); }
+  .keys { display: grid; grid-template-columns: auto auto; gap: var(--wt-space-2) var(--wt-space-6); justify-content: center; text-align: left; margin: var(--wt-space-6) 0; }
+  .keys dt { color: var(--wt-color-text-dim); }
+  .keys dd { margin: 0; }
+  kbd { font-family: var(--wt-font); border: 1px solid var(--wt-color-text-dim); border-radius: 3px; padding: 0 var(--wt-space-1); }
+  .btn { font: inherit; font-size: var(--wt-text-lg); color: var(--wt-color-bg); background: var(--wt-color-world); border: 0; border-radius: 4px; padding: var(--wt-space-3) var(--wt-space-8); min-height: 44px; cursor: pointer; margin: var(--wt-space-1); }
+  .btn--secondary { background: transparent; color: var(--wt-color-text); border: 2px solid var(--wt-color-text-dim); }
+  .btn:focus-visible { outline: 3px solid var(--wt-color-focus); outline-offset: 3px; }
+  .score-big { font-size: var(--wt-text-title); margin: 0 0 var(--wt-space-2); }
+  .hint { font-size: var(--wt-text-sm); color: var(--wt-color-text-dim); }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Game view"></canvas>
+<div id="ui"></div>
+<script>
+// ---------- Reference line art (model space: metres, +x right, +y up, +z forward) ----------
+function prism(plan, y0, y1, topScale = 1) {
+  const n = plan.length, v = [], e = [];
+  plan.forEach(([x, z]) => v.push([x, y0, z]));
+  plan.forEach(([x, z]) => v.push([x * topScale, y1, z * topScale]));
+  for (let i = 0; i < n; i++) { const j = (i + 1) % n; e.push([i, j], [n + i, n + j], [i, n + i]); }
+  return { v, e };
+}
+function merge(...parts) {
+  const v = [], e = [];
+  for (const p of parts) { const o = v.length; v.push(...p.v); e.push(...p.e.map(([a, b]) => [a + o, b + o])); }
+  return { v, e };
+}
+function seg(a, b) { return { v: [a, b], e: [[0, 1]] }; }
+function frustum(base, top, y0, y1) { // base and top are 4-point plans
+  const v = [...base.map(([x, z]) => [x, y0, z]), ...top.map(([x, z]) => [x, y1, z])], e = [];
+  for (let i = 0; i < 4; i++) { const j = (i + 1) % 4; e.push([i, j], [4 + i, 4 + j], [i, 4 + i]); }
+  return { v, e };
+}
+function beam(dir, half, cy, width) { // one hedgehog beam as a thin quad
+  const len = Math.hypot(...dir), d = dir.map(c => c / len);
+  const side = [d[2], 0, -d[0]], sl = Math.hypot(...side) || 1, s = side.map(c => c / sl * width / 2);
+  const a = [-d[0] * half, cy - d[1] * half, -d[2] * half], b = [d[0] * half, cy + d[1] * half, d[2] * half];
+  const v = [[a[0] - s[0], a[1], a[2] - s[2]], [a[0] + s[0], a[1], a[2] + s[2]], [b[0] + s[0], b[1], b[2] + s[2]], [b[0] - s[0], b[1], b[2] - s[2]]];
+  return { v, e: [[0, 1], [1, 2], [2, 3], [3, 0]] };
+}
+const HULL_PLAN = [[-1.0, 3.0], [1.0, 3.0], [1.8, 1.6], [1.8, -2.8], [-1.8, -2.8], [-1.8, 1.6]];
+const MODELS = {
+  // "Hex-hull tank": chamfered six-sided hull, wedge turret, twin short barrels, whip antenna. 33 segments.
+  tank: merge(
+    prism(HULL_PLAN, 0.3, 1.2, 0.85),
+    frustum([[-1.0, -1.4], [1.0, -1.4], [1.0, 0.8], [-1.0, 0.8]], [[-0.6, -1.2], [0.6, -1.2], [0.6, 0.2], [-0.6, 0.2]], 1.2, 2.0),
+    seg([-0.3, 1.6, 0.5], [-0.3, 1.6, 3.8]), seg([0.3, 1.6, 0.5], [0.3, 1.6, 3.8]),
+    seg([-0.5, 2.0, -1.0], [-0.5, 3.4, -1.3])),
+  // Hexagonal pillar, radius 2.5 m, height 7 m. 18 segments.
+  pillar: prism([0, 1, 2, 3, 4, 5].map(i => [2.5 * Math.cos(i * Math.PI / 3 + Math.PI / 6), 2.5 * Math.sin(i * Math.PI / 3 + Math.PI / 6)]), 0, 7),
+  // Long wall slab 12 x 1 x 3 m with two panel joints per long face. 16 segments.
+  wall: merge(prism([[-6, -0.5], [6, -0.5], [6, 0.5], [-6, 0.5]], 0, 3),
+    seg([-2, 0, -0.5], [-2, 3, -0.5]), seg([2, 0, -0.5], [2, 3, -0.5]), seg([-2, 0, 0.5], [-2, 3, 0.5]), seg([2, 0, 0.5], [2, 3, 0.5])),
+  // Tank trap ("hedgehog"): three crossed beams. 12 segments.
+  hedgehog: merge(beam([1, 0.8, 0], 2.3, 1.44, 0.35), beam([-0.5, 0.8, 0.87], 2.3, 1.44, 0.35), beam([-0.5, 0.8, -0.87], 2.3, 1.44, 0.35)),
+  // Shell: small octahedron, 0.3 m. 12 segments.
+  shell: (() => { const r = 0.3, v = [[r,0,0],[-r,0,0],[0,r,0],[0,-r,0],[0,0,r*2],[0,0,-r]], e = [];
+    for (const a of [0, 1]) for (const b of [2, 3, 4, 5]) e.push([a, b]);
+    e.push([2, 4], [4, 3], [3, 5], [5, 2]); return { v, e }; })(),
+};
+// Distant scenery (Could C2): flat-topped mesas, given as [bearing deg, elevation deg].
+const RIDGE = [[0,0],[12,0],[14,2.2],[24,2.2],[26,0],[60,0],[63,1.4],[66,1.7],[70,1.4],[73,0],[140,0],[143,3],[150,3],[152,2],[160,2],[162,0],
+  [220,0],[224,1.8],[236,1.8],[240,0],[300,0],[302,1.2],[318,1.2],[320,0],[345,0],[347,2.6],[352,2.6],[354,0],[360,0]];
+
+// ---------- Mockup scene ----------
+const state = (location.hash || '#play').slice(1);
+const ARENA_HALF = 200, EYE = 2.2, VFOV = 40 * Math.PI / 180; // vertical field of view, as in ARCHITECTURE.md §5.1
+const cam = { x: 0, z: 0, yaw: state === 'play-left' ? 0.9 : 0 }; // yaw: radians, 0 = +z, positive turns right
+const enemy = state === 'model' ? { x: 0, z: 13, yaw: Math.PI - 0.7 } : { x: 9, z: 48, yaw: Math.PI + 0.35 };
+const objects = [
+  { m: 'pillar', x: -22, z: 70, yaw: 0 }, { m: 'wall', x: 30, z: 95, yaw: 0.5 },
+  { m: 'hedgehog', x: -7, z: 28, yaw: 0.3 }, { m: 'pillar', x: 55, z: 150, yaw: 0 },
+  { m: 'hedgehog', x: -60, z: 120, yaw: 1.1 }, { m: 'wall', x: -35, z: 180, yaw: -0.2 },
+];
+const cv = document.getElementById('game'), ctx = cv.getContext('2d');
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+function draw() {
+  const dpr = window.devicePixelRatio || 1, W = innerWidth, H = innerHeight;
+  cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const F = H / 2 / Math.tan(VFOV / 2), NEAR = 0.1, cx = W / 2, cy = H / 2, HFOV = 2 * Math.atan(W / 2 / F);
+  ctx.fillStyle = css('--wt-color-bg'); ctx.fillRect(0, 0, W, H);
+  const shake = state === 'hit' ? 6 : 0;
+  ctx.save(); ctx.translate(shake, -shake / 2);
+  const cs = Math.cos(cam.yaw), sn = Math.sin(cam.yaw);
+  const toCam = ([x, y, z]) => { const dx = x - cam.x, dz = z - cam.z; return [dx * cs - dz * sn, y - EYE, dx * sn + dz * cs]; };
+  function line(a, b) {
+    let [x1, y1, z1] = toCam(a), [x2, y2, z2] = toCam(b);
+    if (z1 < NEAR && z2 < NEAR) return;
+    if (z1 < NEAR) { const t = (NEAR - z1) / (z2 - z1); x1 += (x2 - x1) * t; y1 += (y2 - y1) * t; z1 = NEAR; }
+    else if (z2 < NEAR) { const t = (NEAR - z2) / (z1 - z2); x2 += (x1 - x2) * t; y2 += (y1 - y2) * t; z2 = NEAR; }
+    ctx.moveTo(cx + x1 * F / z1, cy - y1 * F / z1); ctx.lineTo(cx + x2 * F / z2, cy - y2 * F / z2);
+  }
+  function model(name, o) {
+    const m = MODELS[name], c = Math.cos(o.yaw), s = Math.sin(o.yaw);
+    const w = m.v.map(([x, y, z]) => [o.x + x * c + z * s, (o.y || 0) + y, o.z - x * s + z * c]);
+    for (const [a, b] of m.e) line(w[a], w[b]);
+  }
+  // Horizon line and scenery
+  ctx.lineWidth = 1.5; ctx.strokeStyle = css('--wt-color-horizon'); ctx.beginPath();
+  ctx.moveTo(0, cy); ctx.lineTo(W, cy);
+  const yawDeg = cam.yaw * 180 / Math.PI;
+  for (let i = 1; i < RIDGE.length; i++) {
+    const p = RIDGE[i - 1], q = RIDGE[i];
+    const ra = ((p[0] - yawDeg + 540) % 360) - 180, rb = ((q[0] - yawDeg + 540) % 360) - 180;
+    if (Math.abs(ra) > 80 || Math.abs(rb) > 80 || Math.abs(ra - rb) > 90) continue;
+    ctx.moveTo(cx + F * Math.tan(ra * Math.PI / 180), cy - F * Math.tan(p[1] * Math.PI / 180));
+    ctx.lineTo(cx + F * Math.tan(rb * Math.PI / 180), cy - F * Math.tan(q[1] * Math.PI / 180));
+  }
+  ctx.stroke();
+  // Arena boundary fence: posts every 25 m, rail at 1.5 m
+  ctx.strokeStyle = css('--wt-color-world'); ctx.lineWidth = 1.5; ctx.beginPath();
+  for (let i = -ARENA_HALF; i < ARENA_HALF; i += 25) for (const [p, q] of [[[i, ARENA_HALF], [i + 25, ARENA_HALF]], [[i, -ARENA_HALF], [i + 25, -ARENA_HALF]], [[ARENA_HALF, i], [ARENA_HALF, i + 25]], [[-ARENA_HALF, i], [-ARENA_HALF, i + 25]]]) {
+    line([p[0], 0, p[1]], [p[0], 1.5, p[1]]); line([p[0], 1.5, p[1]], [q[0], 1.5, q[1]]);
+  }
+  // Obstacles
+  for (const o of objects) model(o.m, o);
+  ctx.stroke();
+  // Player shell in flight
+  if (state === 'reloading') { ctx.beginPath(); model('shell', { x: 3, y: 1.6, z: 30, yaw: 0 }); ctx.stroke(); }
+  // Enemy
+  ctx.strokeStyle = css('--wt-color-enemy'); ctx.lineWidth = 2; ctx.beginPath(); model('tank', enemy); ctx.stroke();
+  ctx.restore();
+
+  // ---------- HUD graphics ----------
+  if (['start', 'unsupported', 'error'].includes(state)) return; // no HUD behind these screens
+  const hud = css('--wt-color-text'), dim = css('--wt-color-text-dim'), amber = css('--wt-color-enemy');
+  // Crosshair: broken ring, centre dot when ready; dashed and no dot while reloading
+  const ready = state !== 'reloading';
+  ctx.strokeStyle = ready ? hud : dim; ctx.lineWidth = 2; ctx.setLineDash(ready ? [] : [3, 5]);
+  for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(cx, cy, 18, k * Math.PI / 2 + 0.25, (k + 1) * Math.PI / 2 - 0.25); ctx.stroke(); }
+  ctx.setLineDash([]);
+  if (ready) { ctx.fillStyle = hud; ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, 2 * Math.PI); ctx.fill(); }
+  // Bearing tape (enemy locator, M8): bottom centre
+  const tw = Math.min(480, W * 0.6), tx = cx - tw / 2, ty = H - 56;
+  ctx.strokeStyle = dim; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx + tw, ty);
+  for (let a = -180; a <= 180; a += 45) { const x = cx + a / 180 * tw / 2, h = a % 90 === 0 ? 10 : 6; ctx.moveTo(x, ty - h); ctx.lineTo(x, ty + h); }
+  ctx.stroke();
+  // Field-of-view bracket
+  const fx = (HFOV / 2) / Math.PI * tw / 2;
+  ctx.strokeStyle = hud; ctx.beginPath();
+  ctx.moveTo(cx - fx, ty - 14); ctx.lineTo(cx - fx, ty + 14); ctx.moveTo(cx + fx, ty - 14); ctx.lineTo(cx + fx, ty + 14);
+  ctx.moveTo(cx - 6, ty + 22); ctx.lineTo(cx, ty + 14); ctx.lineTo(cx + 6, ty + 22); ctx.stroke();
+  // Enemy marker
+  const ex = enemy.x - cam.x, ez = enemy.z - cam.z;
+  let rel = Math.atan2(ex, ez) - cam.yaw; rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+  const mx = cx + rel / Math.PI * tw / 2;
+  ctx.fillStyle = amber; ctx.beginPath(); ctx.moveTo(mx, ty - 9); ctx.lineTo(mx + 7, ty); ctx.lineTo(mx, ty + 9); ctx.lineTo(mx - 7, ty); ctx.closePath(); ctx.fill();
+  ctx.font = `14px ${css('--wt-font')}`; ctx.textAlign = 'center'; ctx.fillStyle = hud;
+  ctx.fillText(`${Math.round(Math.hypot(ex, ez))} m`, cx, ty + 40);
+  // Off-screen chevron at the screen edge on the shorter turn side
+  if (Math.abs(rel) > HFOV / 2) {
+    const right = rel > 0, x0 = right ? W - 28 : 28, d = right ? -1 : 1;
+    ctx.strokeStyle = amber; ctx.lineWidth = 4; ctx.beginPath();
+    ctx.moveTo(x0 + d * 14, cy - 22); ctx.lineTo(x0, cy); ctx.lineTo(x0 + d * 14, cy + 22); ctx.stroke();
+  }
+  // HUD text (canvas fillText, system monospace)
+  const lives = state === 'hit' ? 2 : 3;
+  {
+    ctx.textAlign = 'left'; ctx.font = `14px ${css('--wt-font')}`; ctx.fillStyle = dim;
+    ctx.fillText('SCORE', 24, 36); ctx.fillText('LIVES', 24, 62);
+    ctx.font = `20px ${css('--wt-font')}`; ctx.fillStyle = hud;
+    ctx.fillText('3000', 84, 37); ctx.fillText(String(lives), 84, 63);
+    ctx.strokeStyle = hud; ctx.lineWidth = 2; ctx.beginPath();
+    for (let i = 0; i < lives; i++) { const x = 112 + i * 18; ctx.moveTo(x, 62); ctx.lineTo(x + 6, 50); ctx.lineTo(x + 12, 62); ctx.closePath(); }
+    ctx.stroke();
+    ctx.textAlign = 'right'; ctx.font = `14px ${css('--wt-font')}`; ctx.fillStyle = dim;
+    ctx.fillText('BEST 12000', W - 24, 36); ctx.fillText('P PAUSE   M SOUND ON', W - 24, 58);
+  }
+  // Hit feedback: alert-coloured frame, one pulse only (no repeated flashing)
+  if (state === 'hit') { ctx.strokeStyle = css('--wt-color-alert'); ctx.lineWidth = 10; ctx.strokeRect(5, 5, W - 10, H - 10); }
+}
+
+// ---------- DOM overlays and HUD text ----------
+const ui = document.getElementById('ui');
+const HUD = () => '';
+const KEYS = `<dl class="keys">
+  <dt>Drive</dt><dd><kbd>W</kbd> <kbd>S</kbd> or <kbd>↑</kbd> <kbd>↓</kbd></dd>
+  <dt>Turn</dt><dd><kbd>A</kbd> <kbd>D</kbd> or <kbd>←</kbd> <kbd>→</kbd></dd>
+  <dt>Fire</dt><dd><kbd>Space</kbd></dd>
+  <dt>Pause</dt><dd><kbd>P</kbd> or <kbd>Esc</kbd></dd>
+  <dt>Sound</dt><dd><kbd>M</kbd></dd></dl>`;
+const screens = {
+  start: `<div class="overlay"><div class="panel">
+    <h1>WIREFRAME TANKS</h1><p class="tagline">One tank. One rival. Find it before it finds you.</p>${KEYS}
+    <button class="btn" autofocus>Start game</button><p class="hint">or press <kbd>Enter</kbd></p><p class="hint">Best score 12000</p></div></div>`,
+  play: HUD(3000, 3), 'play-left': HUD(3000, 3), reloading: HUD(3000, 3),
+  hit: HUD(3000, 2) + `<div class="banner banner--alert" aria-hidden="true">HIT · 2 LIVES LEFT</div>`,
+  paused: HUD(3000, 3) + `<div class="overlay"><div class="panel"><h2>PAUSED</h2>
+    <button class="btn" autofocus>Resume</button><button class="btn btn--secondary">Quit to title</button>
+    <p class="hint">Press <kbd>P</kbd> or <kbd>Esc</kbd> to resume</p></div></div>`,
+  gameover: `<div class="overlay"><div class="panel"><h2>GAME OVER</h2>
+    <p class="score-big">14000</p><p>New best score</p>
+    <button class="btn" autofocus>Play again</button><button class="btn btn--secondary">Title screen</button>
+    <p class="hint">or press <kbd>Enter</kbd></p></div></div>`,
+  unsupported: `<div class="overlay"><div class="panel"><h2>Keyboard needed</h2>
+    <p>Wireframe Tanks is played with a keyboard on a screen at least 640 × 400 pixels. Touch controls are not available yet.</p>
+    <button class="btn btn--secondary" autofocus>Play anyway</button></div></div>`,
+  error: `<div class="overlay"><div class="panel"><h2>Something went wrong</h2>
+    <p>The game stopped unexpectedly. Reload the page to play again.</p><button class="btn" autofocus>Reload</button></div></div>`,
+};
+function render() { ui.innerHTML = screens[state] ?? screens.play; draw(); }
+addEventListener('resize', draw); addEventListener('hashchange', () => location.reload());
+render();
+</script>
+</body>
+</html>
