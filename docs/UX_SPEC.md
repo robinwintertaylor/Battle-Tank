@@ -624,7 +624,7 @@ All sounds start only after the first key press or click (AC-01.4). Nothing is l
 | For | Item |
 |---|---|
 | Analyst | X1–X5 per the Manager's rulings: BR-18 (Enter or focused button), BR-20 (Enter or focused button after K-17; Esc to Start), AC-09.4 (`gameOverDelay` 1.5 s), AC-14.1 (`hitFrameMs` 400, `hitShakeMs` 250, banner for K-13), and criteria for Loading, Keyboard needed, Error, Quit to title and the too-small auto-pause. |
-| Architect | ADR 0005 can move to Accepted (UX-D1). Palette entries `enemyGrace` (dashed) and per-key line widths (§8.2). Vertical FOV 40° in `config.js` (UX-D6). Read tokens from CSS at start-up (§8). The "enemy starts aiming" and "enemy fired" events drive §6.4 and §6.5. Fence posts are generated from K-01 (§7.4). Obstacle layout and footprints from §7.3 and §7.5 go into `config.js` or `models.js`. |
+| Architect | ADR 0005 can move to Accepted (UX-D1). Palette entries `enemyGrace` (dashed) and per-key line widths (§8.2). Vertical FOV 40° in `config.js` (UX-D6). Read tokens from CSS at start-up (§8). The `enemy-aiming` event drives the warning sound, the enemy AI state drives the ring (§6.4), and a `shot` event from an enemy tank while it is out of view drives the chevron flash (§6.5). Fence posts are generated from K-01 (§7.4). Obstacle layout and footprints from §7.3 and §7.5 go into `config.js` or `models.js`. |
 | Tester | A11Y-1 to A11Y-17; the originality checklist in §7.7 for MAN-IP; X6 is answered in §6.5 for E2E-15. |
 | Product | Review and sign-off. Visual timings are named constants for the play test. |
 
