@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
+import { BASE } from './scripts/serve.js';
 
 const PORT = 4173;
+const SITE = `http://127.0.0.1:${PORT}${BASE}`;
 const CI = Boolean(process.env.CI);
 
 export default defineConfig({
@@ -10,7 +12,7 @@ export default defineConfig({
   retries: CI ? 1 : 0,
   reporter: CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
-    baseURL: `http://127.0.0.1:${PORT}/wireframe-tanks/`,
+    baseURL: SITE,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
@@ -21,7 +23,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'node scripts/serve.js',
-    url: `http://127.0.0.1:${PORT}/wireframe-tanks/`,
+    url: SITE,
     env: { PORT: String(PORT) },
     reuseExistingServer: !CI,
   },

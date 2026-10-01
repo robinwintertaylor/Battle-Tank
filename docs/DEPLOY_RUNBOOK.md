@@ -5,7 +5,7 @@
 ## 1. Shape
 
 - **Source of truth:** the Buzz relay repo (`origin`). Work lands there by reviewed PR (SEC-12).
-- **GitHub mirror:** `github.com/robinwintertaylor/wireframe-tanks`, public. It only receives one-way pushes from `scripts/mirror.js`. Nobody pushes to it by hand.
+- **GitHub mirror:** `github.com/robinwintertaylor/Battle-Tank`, public. Pages will serve it at `robinwintertaylor.github.io/Battle-Tank/`; `scripts/serve.js` uses the same `/Battle-Tank/` path locally, and every URL in `site/` is relative. The game is still called Wireframe Tanks on screen. It only receives one-way pushes from `scripts/mirror.js`. Nobody pushes to it by hand.
 - **CI:** `.github/workflows/ci.yml` runs on every push to the mirror. It covers lint, typecheck, unit tests with the 90% `core/` coverage gate, the 500 KB size gate, `npm audit`, a gitleaks scan of the full history, and Playwright in Chromium, Firefox and WebKit.
 - **Deploy:** `.github/workflows/deploy-pages.yml` publishes `site/` to Pages through OIDC (ADR 0007, SEC-8). It is **off**.
 
@@ -35,7 +35,7 @@ node scripts/mirror.js engineer/some-pr    # plus PR branches, so CI runs before
 
 The script fetches `origin` and pushes only the relay's refs, never a local branch. It scans each ref with gitleaks before pushing (SEC-14) and never force-pushes `main`. PR branches may be force-updated, because they are rebased during review.
 
-**Getting CI on a PR:** after `buzz pr open`, the Engineer mirrors the PR branch. CI results show on that commit at `github.com/robinwintertaylor/wireframe-tanks/actions`. Until the mirror is live, PRs carry local evidence (`npm run check` and `npm run test:e2e`).
+**Getting CI on a PR:** after `buzz pr open`, the Engineer mirrors the PR branch. CI results show on that commit at `github.com/robinwintertaylor/Battle-Tank/actions`. Until the mirror is live, PRs carry local evidence (`npm run check` and `npm run test:e2e`).
 
 **First push (SEC-14):** scan the full history with `gitleaks git --redact .` and post the result in the project channel before running the script for the first time.
 

@@ -17,7 +17,7 @@ npm ci                        # install scripts are off (.npmrc)
 npm run check                 # lint, typecheck, unit tests with coverage, size gate
 npx playwright install        # once, for the end-to-end tests
 npm run test:e2e              # Playwright in Chromium, Firefox and WebKit
-npm run serve                 # play at http://127.0.0.1:8080/wireframe-tanks/
+npm run serve                 # play at http://127.0.0.1:8080/Battle-Tank/
 npm run hooks                 # optional: run `npm run check` before every push
 ```
 

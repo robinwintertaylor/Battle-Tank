@@ -12,7 +12,7 @@ import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-const url = process.env.WT_MIRROR_URL ?? 'https://github.com/robinwintertaylor/wireframe-tanks.git';
+const url = process.env.WT_MIRROR_URL ?? 'https://github.com/robinwintertaylor/Battle-Tank.git';
 const tokenFile = process.env.WT_MIRROR_TOKEN_FILE
   ?? join(homedir(), '.config', 'wireframe-tanks', 'github-mirror-token');
 const branches = process.argv.slice(2);

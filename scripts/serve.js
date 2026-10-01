@@ -1,5 +1,5 @@
 // Tiny static server for site/, used by Playwright and for local play.
-// It serves the site under /wireframe-tanks/, the same path GitHub Pages
+// It serves the site under /Battle-Tank/, the same path GitHub Pages
 // uses for this project site, so absolute URLs break here as they would live.
 import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
@@ -7,7 +7,7 @@ import { createServer } from 'node:http';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const BASE = '/wireframe-tanks/';
+export const BASE = '/Battle-Tank/';
 const ROOT = resolve(fileURLToPath(new URL('../site', import.meta.url)));
 
 const TYPES = {
