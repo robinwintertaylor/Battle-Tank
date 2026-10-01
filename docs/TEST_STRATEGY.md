@@ -11,7 +11,7 @@ created: 2026-10-01
 
 This document says how we will prove Wireframe Tanks works before Robin decides to deploy it: what we test, at which level, with which tools, where the tests run, and when Verify can start and finish. It is sized for a small static game with no backend.
 
-Section 10 traces every acceptance criterion, business rule, NFR and security requirement in `REQUIREMENTS.md` (revision 2, commit `302d4a5`) and every accessibility requirement in `UX_SPEC.md` (commit `169b8cc`) to its tests. The six conflicts between them (section 10.8) are resolved, and section 10 follows `REQUIREMENTS.md` revision 2 (`302d4a5`).
+Section 10 traces every acceptance criterion, business rule, NFR and security requirement in `REQUIREMENTS.md` (revision 3, commit `6f44804`) and every accessibility requirement in `UX_SPEC.md` (commit `169b8cc`) to its tests. The six conflicts between them (section 10.8) are resolved, and section 10 follows `REQUIREMENTS.md` revision 3 (`6f44804`).
 
 ## 1. What we are testing
 
@@ -200,11 +200,11 @@ If a criterion cannot be met, I do not sign off. I report which one and why, and
 | 3 | End-to-end tests that aim and shoot with key presses are flaky | Fixed seed and test hook (T3, T5), so the scenario is the same every run; precise hit logic is tested at unit level instead. |
 | 4 | No Mac available, so Safari is untested | WebKit in CI as a proxy, and the report says plainly that Safari was not tested. |
 | 5 | Screens drawn on the canvas cannot be checked for accessibility automatically | T6, or manual checks recorded in the report. |
-| 6 | Requirements numbers change after this document | Section 10 is keyed to `REQUIREMENTS.md` revision 2 at `302d4a5`. I recheck it whenever that file changes and again before Verify. |
+| 6 | Requirements numbers change after this document | Section 10 is keyed to `REQUIREMENTS.md` revision 3 at `6f44804`. I recheck it whenever that file changes and again before Verify. |
 
 ## 10. Traceability
 
-Keyed to `REQUIREMENTS.md` revision 2 at commit `302d4a5`. Every acceptance criterion, business rule, NFR and security requirement maps to at least one test. Product-brief IDs are kept in the US rows so each test still traces back to the brief. The Analyst keeps `REQUIREMENTS.md` §12 at the summary level; this section is the detailed table, and the two are kept in step.
+Keyed to `REQUIREMENTS.md` revision 3 at commit `6f44804`. Every acceptance criterion, business rule, NFR and security requirement maps to at least one test. Product-brief IDs are kept in the US rows so each test still traces back to the brief. The Analyst keeps `REQUIREMENTS.md` §12 at the summary level; this section is the detailed table, and the two are kept in step.
 
 ### 10.1 Test catalogue
 
@@ -245,7 +245,7 @@ Test ID prefixes: `UT` unit (Node, `node:test`), `E2E` end to end (Playwright), 
 | E2E-22 | **Loading.** Delay one game module with Playwright's request routing. While it is held, the Start button is disabled and reads "Loading…", and Enter and Space start nothing. Release it, and the button is enabled and focused. | AC-01.5 |
 | E2E-23 | **Keyboard needed.** Emulate a touch-only device, then separately a 600 × 380 window at load. Each shows the Keyboard needed overlay with "Play anyway" focused, and activating it shows Start. With a fine pointer and a large window it never appears. | US-19, BR-24 |
 | E2E-24 | **Error screen.** An init script makes a canvas drawing call throw once play has started, which causes a real uncaught error in the loop. The loop stops (the snapshot's tick stops advancing), the Error overlay shows the §11 copy with "Reload" focused, no stack trace or file path is on screen, the error is in the console, and Reload reloads the page. This scenario is exempt from the no-console-errors check in E2E-11. | US-20, BR-27 |
-| E2E-25 | **Window too small.** While playing, resize to 639 × 400 and to 640 × 399: each pauses with the "make the window larger" message and Resume disabled. Resize to 640 × 400: Resume is enabled and the game stays paused until resumed. | AC-10.9, AC-10.10, BR-25 |
+| E2E-25 | **Window too small.** While playing, resize to 639 × 400 and to 640 × 399: each pauses with the "make the window larger" message and Resume disabled, and pressing P and Esc leaves it paused. Resize to 640 × 400: Resume is enabled, the game stays paused, and P then resumes it. | AC-10.9 to AC-10.11, BR-25 |
 | E2E-26 | **Quit to title.** With a stored best score of 100, play a seeded game to 200 points, pause, and activate Quit to title. The Start screen shows and the stored best is still 100. | AC-10.8, BR-26 |
 
 **Build, lint and settings checks.**
@@ -331,7 +331,8 @@ Test ID prefixes: `UT` unit (Node, `node:test`), `E2E` end to end (Playwright), 
 | AC-10.7 Focus on the pause dialog; held Space does not resume | Should | | E2E-07, E2E-19 | |
 | AC-10.8 Quit to title; best score not updated | Should | UT-FLOW, UT-STORE | E2E-26 | |
 | AC-10.9 Window under 640 × 400 pauses, Resume disabled | Should | UT-FLOW | E2E-25 | |
-| AC-10.10 Resume re-enabled at 640 × 400, still paused | Should | UT-FLOW | E2E-25 | |
+| AC-10.10 Resume and P/Esc work again at 640 × 400, still paused | Should | UT-FLOW | E2E-25 | |
+| AC-10.11 P and Esc do nothing while still too small | Should | UT-FLOW | E2E-25 | |
 | AC-11.1 to AC-11.3 Shot, explosion, warning sounds | Should | | E2E-08 | |
 | AC-11.4 No audio files | Should | | | BUILD-02 |
 | AC-12.1, AC-12.2 Mute toggles on every screen | Should | | E2E-08 | |
@@ -458,8 +459,8 @@ The Manager ruled on all six (Cortex D-87). The Analyst applied X1–X5 and the 
 | X2 | What restarts after game over | Enter or Play again after the lockout; Esc or Title screen goes to Start (BR-20) | AC-09.5, AC-09.6, AC-09.8, AC-09.9, E2E-06 |
 | X3 | Delay before game over | 1.5 s Destroyed state (K-27) | AC-09.4, AC-14.5, E2E-06 |
 | X4 | Hit feedback | 0.4 s frame (K-23), 0.25 s 6 px shake (K-28), banner for the respawn delay | AC-14.1, AC-14.4, UT-HUD, E2E-06 |
-| X5 | Extra screens | In scope: BR-24 to BR-27, US-19, US-20, AC-01.5, AC-10.8 to AC-10.10 | E2E-22 to E2E-26 |
-| X6 | Enemy fire out of view | Edge chevron alert for 0.3 s (AC-08.5) | UT-HUD, E2E-15 |
+| X5 | Extra screens | In scope: BR-24 to BR-27, US-19, US-20, AC-01.5, AC-10.8 to AC-10.11 | E2E-22 to E2E-26 |
+| X6 | Enemy fire out of view | Edge chevron alert for 0.3 s (K-30, AC-08.5) | UT-HUD, E2E-15 |
 ## 11. Deliverables from me
 
 | When | What |
@@ -467,7 +468,7 @@ The Manager ruled on all six (Cortex D-87). The Analyst applied X1–X5 and the 
 | Now (Design) | This strategy. |
 | Done (`34cab00`) | Traceability from every requirement to its tests (section 10). |
 | Done (`169b8cc`) | UX accessibility requirements keyed to tests (section 10.6). |
-| Done (`302d4a5`) | Tests for requirements revision 2: US-19, US-20, AC-01.5, AC-08.5, AC-09.8, AC-09.9, AC-10.7 to AC-10.10, AC-14.4, AC-14.5 (section 10.2). |
+| Done (`302d4a5`) | Tests for requirements revision 2: US-19, US-20, AC-01.5, AC-08.5, AC-09.8, AC-09.9, AC-10.7 to AC-10.11, AC-14.4, AC-14.5 (section 10.2), and the revision 3 changes (`6f44804`). |
 | Build | The Playwright suite and the performance and "Battlezone" checks, alongside the Developer's unit tests and the Engineer's CI. |
 | Verify | Test execution, defects as Buzz issues, retests. |
 | End of Verify | `docs/TEST_REPORT.md`: coverage, results, open defects with severity, and a go/no-go recommendation. |
