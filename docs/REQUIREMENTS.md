@@ -12,6 +12,8 @@ created: 2026-10-01
 
 **Revision 2 (2026-10-01):** applies the Manager's rulings X1–X5 (and the X6 cue in AC-08.5) on the conflicts with `UX_SPEC.md` (`TEST_STRATEGY.md` §10.8): start and restart keys, the 1.5 s game-over delay, the hit feedback timings, and the Loading, Keyboard needed, Error, Quit to title and window-too-small states.
 
+**Revision 3 (2026-10-01):** Product's two fixes on revision 2 (D-99): pause keys also do nothing while the window is too small (BR-25, AC-10.10, AC-10.11), AC-10.4 allows Resume, and the chevron flash is constant K-30.
+
 This document turns the product brief into numbered, testable requirements. Every other artifact refers to these numbers. Product-brief IDs (M1–M12, S1–S5, C1–C4) are kept alongside so each requirement traces back to the brief. Security requirements keep the threat model's own IDs (SEC-1 to SEC-23).
 
 ## 0. How to read this document
@@ -91,6 +93,7 @@ This document turns the product brief into numbered, testable requirements. Ever
 | K-27 | Delay from losing the last life to the Game over screen | 1.5 s | BR-13 |
 | K-28 | View shake on hit: duration and amplitude | 0.25 s, 6 px | US-14 |
 | K-29 | Minimum playable window size | 640 × 400 CSS px | BR-24, BR-25 |
+| K-30 | Edge chevron alert flash when an out-of-view enemy fires (`enemyShotFlashMs`) | 0.3 s | AC-08.5 |
 
 **Enemy difficulty table (S3).** One row per level. Harder levels turn faster, aim more tightly and reload sooner. Each column must change monotonically, never easier from one level to the next.
 
@@ -186,7 +189,7 @@ If no valid point is found after 50 random attempts, the furthest valid position
 
 **BR-24 Keyboard needed.** At load, if `matchMedia('(any-pointer: fine)')` is false or the window is smaller than K-29, the Keyboard needed overlay is shown instead of the Start overlay. It is advice, not a block: "Play anyway" goes to the Start screen. Ruling X5.
 
-**BR-25 Window too small.** While Playing or Respawning, if the window becomes smaller than K-29 in either dimension, the game pauses (BR-22) and the Paused overlay says to make the window larger. Resume is disabled until the window is at least K-29 again. Ruling X5.
+**BR-25 Window too small.** While Playing or Respawning, if the window becomes smaller than K-29 in either dimension, the game pauses (BR-22) and the Paused overlay says to make the window larger. Until the window is at least K-29 again, the Resume button is disabled and the `KeyP` and `Escape` keys do nothing. Ruling X5.
 
 **BR-26 Quit to title.** From the Paused screen, "Quit to title" ends the current game and shows the Start screen. A quit game does not update the best score (US-15); only a game that reaches Game over does. Ruling X5.
 
@@ -282,7 +285,7 @@ As a player, I want to know which way the enemy is at all times, so that I do no
 - **AC-08.2** Given the enemy is directly behind the player, then the locator shows it behind, distinguishably from in front.
 - **AC-08.3** Given no enemy exists (during the respawn delay), then the locator shows no enemy.
 - **AC-08.4** Given the player turns, then the locator updates in the same frame.
-- **AC-08.5** Given the enemy is out of view, when it fires, then the edge chevron changes to the alert colour for 0.3 s, once per shot, so the shot has a visual cue (NFR-17; ruling X6, UX spec §6.5).
+- **AC-08.5** Given the enemy is out of view, when it fires, then the edge chevron changes to the alert colour for K-30 (0.3 s), once per shot, so the shot has a visual cue (NFR-17; ruling X6, UX spec §6.5).
 
 ### US-09 Score, lives, game over and restart (M9, Must)
 
@@ -305,13 +308,14 @@ As a player, I want to pause, and have the game pause itself when I switch away,
 - **AC-10.1** Given the Playing screen, when `KeyP` or `Escape` is pressed, then the Paused screen shows, and no tank, shell or timer advances while it is shown.
 - **AC-10.2** Given the Paused screen, when `KeyP` or `Escape` is pressed, then play resumes from exactly the state it paused in.
 - **AC-10.3** Given the Playing screen, when the tab is hidden or the window loses focus, then the game pauses.
-- **AC-10.4** Given the game paused automatically, when focus returns, then it stays paused until the pause key is pressed.
+- **AC-10.4** Given the game paused automatically, when focus returns, then it stays paused until the pause key is pressed or Resume is activated.
 - **AC-10.5** Given the Paused screen, then it shows how to resume.
 - **AC-10.6** Given the Paused screen, when Space or a drive key is pressed, then nothing in the game changes (Space may activate the focused button).
 - **AC-10.7** Given the Paused screen opens, then focus is on the pause dialog, not on a button, so a held or pressed Space does not resume; activating "Resume" (after tabbing to it) resumes play as in AC-10.2.
 - **AC-10.8** Given the Paused screen, when "Quit to title" is activated, then the Start screen shows, and the best score is not updated from the quit game (BR-26).
 - **AC-10.9** Given the Playing screen, when the window is resized below 640 × 400, then the game pauses, the Paused screen says "Make the window larger to keep playing.", and Resume is disabled.
-- **AC-10.10** Given the game paused because the window was too small, when the window is made at least 640 × 400, then Resume is enabled, and play stays paused until the player resumes.
+- **AC-10.10** Given the game paused because the window was too small, when the window is made at least 640 × 400, then Resume is enabled and `KeyP` and `Escape` resume again, and play stays paused until the player resumes.
+- **AC-10.11** Given the game paused because the window is too small, when `KeyP` or `Escape` is pressed while the window is still smaller than 640 × 400, then the game stays paused.
 
 ### US-11 Sound effects (S1, Should)
 
@@ -569,7 +573,7 @@ Requirement → product brief → tests. Test IDs follow `TEST_STRATEGY.md` §10
 | US-07 | M7 | Must | BR-09, BR-10, BR-14 | UT-HIT, E2E-05 |
 | US-08 | M8 | Must | — | UT-LOC, E2E-02, A11Y-CONTRAST |
 | US-09 | M9 | Must | BR-11, BR-12, BR-13, BR-19, BR-20, BR-21 | UT-SCORE, E2E-05, E2E-06 |
-| US-10 | S4, X5 | Should | BR-22, BR-25, BR-26 | UT-LOOP, E2E-07; AC-10.7 to AC-10.10 new, Tester to number |
+| US-10 | S4, X5 | Should | BR-22, BR-25, BR-26 | UT-LOOP, E2E-07; AC-10.7 to AC-10.11 new, Tester to number |
 | US-11 | S1 | Should | — | E2E-08, MAN-IP |
 | US-12 | S2 | Should | BR-23 | E2E-08 |
 | US-13 | S3 | Should | BR-17 | UT-DIFF |
