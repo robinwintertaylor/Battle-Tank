@@ -20,7 +20,7 @@ const networkGlobals = [
 // T1 and T3: core/ and the pure render modules stay free of the browser,
 // the clock and unseeded randomness (ARCHITECTURE.md section 2).
 const pureGlobals = [
-  'window', 'document', 'navigator', 'location', 'history', 'screen',
+  'window', 'self', 'document', 'navigator', 'location', 'history', 'screen',
   'localStorage', 'sessionStorage', 'indexedDB',
   'performance', 'Date', 'requestAnimationFrame', 'cancelAnimationFrame',
   'setTimeout', 'setInterval', 'AudioContext', 'HTMLCanvasElement', 'OffscreenCanvas',

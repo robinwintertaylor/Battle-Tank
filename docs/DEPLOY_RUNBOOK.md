@@ -16,6 +16,7 @@
 | Node.js 22 or later (CI uses 24) | Mirror machine | `npm ci` installs the dev tools |
 | gitleaks 8.30.1 | On `PATH` of the mirror machine | `scripts/mirror.js` refuses to push without it |
 | Fine-grained token | `~/.config/wireframe-tanks/github-mirror-token` (override with `WT_MIRROR_TOKEN_FILE`) | This one repository only. Contents and Workflows set to read and write, nothing else. 90-day expiry (SEC-13). Never in the repo, Buzz, Cortex or logs. |
+| Token file locked to Robin's account | Run once in `cmd` after saving it: `icacls "%USERPROFILE%\.config\wireframe-tanks\github-mirror-token" /inheritance:r /grant:r "%USERNAME%:R"` | Only Robin's Windows account can read it (SEC-13 as amended by Security) |
 | GitHub account | Robin | 2FA on, ideally with a passkey (SEC-10) |
 
 ### Repository settings (Robin, once)
@@ -46,7 +47,7 @@ Turning it on, with Robin's explicit go-ahead in the thread:
 
 1. Robin reviews `docs/` for anything he would not want public (SEC-16).
 2. Settings → Pages: set Source to **GitHub Actions** and turn on **Enforce HTTPS** (SEC-23).
-3. Settings → Environments → `github-pages`: deployment branches set to `main` only (SEC-9).
+3. Settings → Environments → `github-pages`: deployment branches set to `main` only (SEC-9), and add Robin as a **required reviewer**, so nothing deploys without his approval. This is Security's condition for the mirror token having Workflows write (SEC-13 as amended).
 4. Settings → Variables → Actions: add `PAGES_DEPLOY_ENABLED` = `true`.
 5. Actions → Deploy to GitHub Pages → Run workflow on `main`. The job refuses to run unless CI succeeded on that exact commit.
 

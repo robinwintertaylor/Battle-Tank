@@ -44,5 +44,6 @@ const refspecs = branches.map((branch) => {
 
 const helper = '!f() { test "$1" = get || exit 0; echo username=x-access-token; printf "password=%s\n" "$(tr -d "\r\n" < "$WT_TOKEN_FILE")"; }; f';
 run('git', ['-c', 'credential.helper=', '-c', `credential.helper=${helper}`, 'push', url, ...refspecs],
-  { WT_TOKEN_FILE: tokenFile, GIT_TERMINAL_PROMPT: '0' });
+  // Git runs the helper in sh, which eats the backslashes in C:\Users\...
+  { WT_TOKEN_FILE: tokenFile.replaceAll('\\', '/'), GIT_TERMINAL_PROMPT: '0' });
 console.log(`Mirrored ${branches.join(', ')} to ${url}`);
