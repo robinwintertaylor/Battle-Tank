@@ -21,7 +21,7 @@ The significant choices are recorded as ADRs in [`docs/adr/`](adr/):
 | [0002](adr/0002-plain-javascript-no-build.md) | Plain JavaScript ES modules with no build step. Type-checked from JSDoc. Five dev dependencies. |
 | [0003](adr/0003-fixed-timestep-deterministic-simulation.md) | Fixed 60 Hz simulation step, pure and deterministic, with an injected clock and a seeded random generator. |
 | [0004](adr/0004-entity-collection-and-controllers.md) | Tanks in a collection; one controller per tank; enemy kinds in a registry. |
-| [0005](adr/0005-html-screens-canvas-play.md) | Start, pause and game-over screens in HTML over the canvas; play and HUD on the canvas. Subject to `UX_SPEC.md`. |
+| [0005](adr/0005-html-screens-canvas-play.md) | Start, pause and game-over screens in HTML over the canvas; play and HUD on the canvas. Designer agreed (UX-D1). |
 | [0006](adr/0006-hand-written-web-audio.md) | Sound effects synthesised with hand-written Web Audio code. No ZzFX. |
 | [0007](adr/0007-github-pages-from-site-folder.md) | Publish only the `site/` folder to GitHub Pages with GitHub's own Actions flow, from the public mirror. |
 | [0008](adr/0008-test-hook-without-url.md) | The test hook is switched on by a global set before load, not by the URL. |
@@ -112,7 +112,7 @@ site/                      <- the only folder that is published (ADR 0007)
                ai/registry.js ai/hunter.js
                game.js           screen state machine: start, playing, paused, game over
                best-score.js     parse and validate a stored value (SEC-22)
-    render/    camera.js scene.js hud.js canvas-renderer.js
+    render/    camera.js scene.js hud.js palette.js canvas-renderer.js
     platform/  loop.js input.js audio.js storage.js screens.js test-hook.js
 test/
   unit/        *.test.js         node:test, mirrors site/src/core and site/src/render
@@ -201,7 +201,28 @@ Player and enemy tanks go through the same movement, firing and collision code. 
 | `camera.js` | Camera at the player's eye height, looking along the heading (yaw only). Transforms world points to camera space, clips each segment against the near plane, and projects to screen pixels. Points behind the camera are clipped, never mirrored. | `projectSegments(segments3d, camera, viewport, out2d) → count` |
 | `scene.js` | Turns the game state into a flat list of 3D line segments: obstacles, live tanks, shells, horizon. Interpolates positions with `alpha` (section 5.2). Culls objects beyond the far distance or wholly behind the camera before projection. | `buildScene(state, alpha, out3d) → count` |
 | `hud.js` | Turns the state into 2D segments and text items for the HUD: crosshair, enemy locator (M8), score, lives, hit feedback (S5). Layout and form come from `UX_SPEC.md`. | `buildHud(state, viewport, out) → { segments, texts }` |
-| `canvas-renderer.js` | Clears the canvas and strokes all segments of one colour as a single path. Draws HUD text with `fillText`. Knows nothing about tanks. | `draw(ctx, segments2d, hud, palette)` |
+| `canvas-renderer.js` | Clears the canvas and strokes each palette key's segments as a single path with that key's colour, width and dash. Draws HUD text with `fillText`. Knows nothing about tanks. | `draw(ctx, buckets, hud, palette)` |
+| `palette.js` | The palette keys, line widths, dash patterns and the CSS token each colour comes from (`UX_SPEC.md` §8.2). | `PALETTE_SPEC` |
+
+**Palette and stroke styles.** Every segment carries a palette key. `scene.js` and `hud.js` write segments into one buffer per key, and `canvas-renderer.js` draws each key as one path with its own colour, line width and dash pattern. That keeps the "one stroke per style" rule from section 6.1. The keys, widths and dashes come from `UX_SPEC.md` §8.2 and live in `render/palette.js`:
+
+| Key | Colour token | Line width (CSS px) | Dash |
+|---|---|---|---|
+| `background` | `--wt-color-bg` | — | — |
+| `horizon` | `--wt-color-horizon` | 1.5 | solid |
+| `world` | `--wt-color-world` | 1.5 | solid |
+| `playerShell` | `--wt-color-world` | 1.5 | solid |
+| `enemy` | `--wt-color-enemy` | 2 | solid |
+| `enemyShell` | `--wt-color-enemy` | 2 | solid |
+| `enemyGrace` | `--wt-color-enemy` | 2 | `[6, 4]` |
+| `hud` | `--wt-color-text` | 2 | solid |
+| `hudDim` | `--wt-color-text-dim` | 2 | solid; the "cannot fire" crosshair uses `[3, 5]` |
+| `alert` | `--wt-color-alert` | 10 (hit frame) | solid |
+
+- **One source of truth for colour:** `main.js` reads the colour tokens once at start-up with `getComputedStyle(document.documentElement)` and passes the resolved palette to the renderer (`UX_SPEC.md` §8). `palette.js` holds only keys, widths, dashes and token names, so it stays pure and testable.
+- **Widths are CSS pixels.** The renderer multiplies line widths and dash lengths by the same `devicePixelRatio` scale it applies to the canvas, so lines keep their designed weight on high-density screens.
+- **The grace state is a scene decision:** `scene.js` puts an enemy with `graceTicks > 0` under `enemyGrace` and switches it to `enemy` when the grace period ends. A unit test can check that without a canvas.
+- **Bucket sizes:** each key's buffer is preallocated. The total across all keys stays inside the 1,500-segment budget.
 
 **This is the renderer seam the research brief and Product asked for (T4).** Everything left of `canvas-renderer.js` produces numbers. A test can assert "the enemy is in front, so its segments are inside the viewport" or "the locator points left" without a canvas. A later move to WebGL replaces only `canvas-renderer.js` (ADR 0001).
 
@@ -230,6 +251,8 @@ f  = (h / 2) / tan(fov / 2)
 sx = w / 2 + f * x / z
 sy = h / 2 - f * y / z
 ```
+
+`fov` is **40° vertical** (`CONFIG.fovVerticalDeg = 40`, `UX_SPEC.md` UX-D6). The horizontal field of view follows from the aspect ratio, `2 · atan(tan(fov / 2) · w / h)`, which is about 66° at 16:9. `camera.js` exports it, because the HUD's bearing-tape bracket and the "enemy out of view" test for the edge chevron both depend on it, and the projection and the HUD must agree on what "in view" means.
 
 Each segment is clipped to `z ≥ near` (for example 0.1) before the divide. The canvas itself clips anything that projects off-screen, so no other clipping is needed. All of this is plain arithmetic in `camera.js` and is the first thing to unit test (test strategy §3.1).
 
@@ -351,7 +374,7 @@ The Designer sets the requirements in `UX_SPEC.md`. The design supports them by 
 | T3 seedable randomness | `rng.js`, with its state inside `GameState`. `Math.random` is banned in `core/` by lint. |
 | T4 renderer takes line segments | `scene.js` and `hud.js` output segment buffers. `canvas-renderer.js` only draws them. |
 | T5 read-only test hook | ADR 0008: a frozen copy of the state, switched on by a global set before load. |
-| T6 screens in HTML | ADR 0005, subject to the Designer's answer in `UX_SPEC.md`. |
+| T6 screens in HTML | ADR 0005. The Designer agreed in `UX_SPEC.md` (UX-D1). |
 
 Unit tests use Node's built-in `node:test` runner and its built-in coverage, with a line-coverage gate of 90% on `core/` (test strategy §3.1). End-to-end tests use Playwright against `scripts/serve.js`, which serves `site/` the same way Pages does. For time-dependent end-to-end checks, Playwright's `page.clock` can control the page's timers; the Tester should confirm it drives `requestAnimationFrame` in all three engines before relying on it.
 
@@ -394,7 +417,7 @@ There is no network API, so there is no OpenAPI document. The interfaces that ma
 | Input snapshot | `{ throttle: -1\|0\|1, turn: -1\|0\|1, firePressed: boolean, commands: Command[] }` with commands `start`, `pause`, `resume`, `mute`, `restart`, `quit-to-title`, `debug`. `firePressed` is set by a key-down that is not an auto-repeat (BR-01). Commands come from keys during play and from the HTML screens' buttons and Enter/Esc handling (BR-18, BR-20 as amended for X1, X2). | `input.js` and `screens.js` produce, `sim.js` and `game.js` consume |
 | AI kind | `think(memory, tank, view, rng) → { throttle, turn, fire }`, where `view` is a read-only summary of the player, obstacles and difficulty | `sim.js`, Phase 2 kinds |
 | Scene | `buildScene(state, alpha, out: Float32Array) → segmentCount` (6 floats per 3D segment) | renderer, unit tests |
-| Renderer | `draw(ctx, segments2d, count, hud, palette)` | `main.js` |
+| Renderer | `draw(ctx, buckets, hud, palette)`, where `buckets` maps each palette key to a 2D segment buffer and count, and `palette` is the resolved colour, width and dash per key | `main.js` |
 | Events | `{ type: 'shot' \| 'shell-blocked' \| 'tank-hit' \| 'player-hit' \| 'enemy-spawned' \| 'enemy-aiming' \| 'level-up' \| 'game-over', tick, ...details }` | audio, hit feedback, test hook |
 | Test hook | `window.__WT_TEST__ = { seed }` set before load; the page adds `snapshot(): FrozenGameState & { view }` and `events(): GameEvent[]`, the last 1,000 events since load in order | Playwright only |
 | Storage | key `wireframe-tanks:best-score`, value a decimal integer string | `storage.js` |

@@ -1,6 +1,6 @@
 # ADR 0005: HTML screens over a canvas for play
 
-**Status:** Proposed, subject to the Designer's answer in `UX_SPEC.md`. **Date:** 2026-10-01. **Author:** Architect.
+**Status:** Proposed. The Designer agreed in `UX_SPEC.md` (UX-D1, `9611e95`), so the condition is met. **Date:** 2026-10-01. **Author:** Architect.
 
 ## Context
 
