@@ -1,13 +1,15 @@
 ---
 title: "Wireframe Tanks — product brief"
 tags: [wireframe-tanks, discovery, product]
-status: awaiting Robin's scope approval
+status: scope approved by Robin 2026-10-01 (Cortex D-41)
 created: 2026-09-30
 ---
 
 # Wireframe Tanks — product brief
 
-**Author:** Product. **Date:** 2026-09-30. **Inputs:** `docs/IDEA_BRIEF.md` (scope decision D-24), `docs/RESEARCH_BRIEF.md`.
+**Author:** Product. **Date:** 2026-09-30, updated 2026-10-01 with Robin's scope approval. **Inputs:** `docs/IDEA_BRIEF.md` (scope decision D-24), `docs/RESEARCH_BRIEF.md`.
+
+**Scope approved.** On 2026-10-01 Robin approved the MVP exactly as written here, confirmed assumptions A1 and A2, and asked for a second phase once the MVP works (section 10). Cortex decision D-41.
 
 This brief says what we build first and what we leave out. It is the reference for the Requirements stage and for accepting the finished game. Section references such as "research §5" point into the research brief.
 
@@ -19,11 +21,11 @@ A small, original tank duel in the vector-arcade style that anyone can open in a
 
 | # | Assumption | Status |
 |---|---|---|
-| A1 | This is a free hobby project with no charging and no adverts. | Assumed on the Manager's instruction. Robin has been asked. |
-| A2 | The game is hosted as a static site on a free host. Which host depends on whether a public GitHub mirror is acceptable. | Robin has been asked. It does not change this brief. |
+| A1 | This is a free hobby project with no charging and no adverts. | **Confirmed** by Robin 2026-10-01, "for now". |
+| A2 | The game is hosted as a static site on a free host. | **Confirmed** by Robin 2026-10-01: GitHub Pages, from a public GitHub repository on Robin's existing account. |
 | A3 | Nothing is published without Robin's go-ahead. | Fixed by the playbook. |
 
-If A1 turns out to be wrong, the IP risk goes up (research §4) and this brief needs another look before the scope gate.
+Robin confirmed A1 "for now". If the project ever charges or carries adverts, the IP risk goes up (research §4), GitHub Pages' terms no longer fit (research §8), and this brief needs another look first.
 
 ## 3. Target users
 
@@ -77,13 +79,14 @@ A single-player game on one page, for desktop browsers with a keyboard:
 
 | Item | Where it goes |
 |---|---|
-| Multiplayer | Roadmap |
-| Touch and mobile | Roadmap |
-| Gamepad | Roadmap |
-| Glow and other visual effects | Roadmap |
+| More than one enemy at once | Phase 2 |
+| More enemy types | Phase 2 |
+| Multiplayer | Phase 2 |
+| Touch and mobile | Roadmap, unscheduled |
+| Gamepad | Roadmap, unscheduled |
+| Glow and other visual effects | Roadmap, unscheduled |
 | Tanks that hide what is behind them | Not planned (decision P1) |
 | Tread-style controls | Not planned (decision P3) |
-| More enemy types | Roadmap |
 | Online leaderboard, accounts, any backend | Not planned. It would break the no-cost, no-backend scope. |
 | Analytics or tracking | Not planned for the MVP |
 | Music | Not planned |
@@ -156,15 +159,27 @@ The targets for metrics 2, 3 and 4 are my judgement of what "instant and smooth"
 
 ## 10. Roadmap beyond the MVP
 
-In priority order. None of it is committed, and each item needs its own scope decision from Robin.
+### Phase 2: expand the game
+
+Robin approved a second phase on 2026-10-01, to start **once the MVP works**. It is approved in direction only. Its detailed scope will be set in a new product brief update and a scope gate with Robin when Phase 2 starts. Robin named the items below and added "etc.", so the list may grow.
 
 | Order | Item | Why this order |
 |---|---|---|
-| 1 | Polish: glow, best score, horizon scenery, explosion effects (whatever was not finished from Could) | Cheap, and it improves the game every player already has. |
-| 2 | More variety: a second enemy type, more than one enemy at once | Deepens the single-player game with no new infrastructure. |
-| 3 | Gamepad | Small addition. One existing browser clone already combines gamepad and keyboard (research §6). |
-| 4 | Touch and mobile | Opens the game to phone users. It needs new controls and a layout redesign. |
-| 5 | Multiplayer | The largest step. It needs a server, which ends the no-backend, no-cost scope and brings hosting cost and new security work. |
+| 2.1 | Multiple attackers at once | Builds directly on the MVP enemy, with no new infrastructure. |
+| 2.2 | Different enemy types | Adds variety to the single-player game, with no new infrastructure. |
+| 2.3 | Multiplayer | The largest step. GitHub Pages serves only static files, so multiplayer needs a game server, its own hosting research, and Robin's decision on any cost. It also brings new security work. |
+
+**What this means for the MVP:** nothing in Phase 2 is MVP scope, and none of it is built early. The one thing I ask of the design is not to rule it out: the MVP has one enemy at a time (decision P5), but the design should not make a second enemy impossible to add.
+
+### Later, unscheduled
+
+Candidates for Phase 2 or after. None of it is committed.
+
+| Item | Note |
+|---|---|
+| Polish: glow, best score, horizon scenery, explosion effects (whatever was not finished from Could) | Cheap, and it improves the game every player already has. |
+| Gamepad | Small addition. One existing browser clone already combines gamepad and keyboard (research §6). |
+| Touch and mobile | Opens the game to phone users. It needs new controls and a layout redesign. |
 
 ## 11. Risks to the product
 
@@ -174,16 +189,14 @@ In priority order. None of it is committed, and each item needs its own scope de
 | 2 | The game resembles the 1980 original closely enough to draw a takedown request | M11, decision P4, and a check by the Tester before release (research §4, §9). |
 | 3 | The game is playable but not fun: the enemy is too easy or too hard | S3 gives three numbers to tune. Metric 7 is the check. |
 | 4 | A later wish for solid-looking tanks or glow forces a renderer change | Decisions P1 and P2 are explicit. The design should keep drawing behind a small interface. |
+| 5 | Phase 2 items leak into the MVP because they are already approved in direction | Phase 2 starts only once the MVP works. Until then, multiple attackers, enemy types and multiplayer are change requests like anything else outside section 8. |
 
 ## 12. Open questions
 
-**For Robin** (already asked by the Manager in the project thread)
-
-1. Is a public GitHub mirror of the source acceptable? It decides the host and changes nothing in this brief.
-2. Is this strictly a free hobby project with no charging or adverts? This brief assumes yes (A1).
+**For Robin:** none. Both questions from the scope gate are answered (A1, A2).
 
 **For the Requirements stage**
 
-3. Analyst: how many lives, and what score per kill? I suggest three lives and leave the numbers to the requirements.
-4. Designer: the form of the enemy locator (M8) and the HUD layout, both original.
-5. Analyst and Designer: the arena edge. Either the arena is bounded or it wraps around; it must not let the player drive away from the fight forever.
+1. Analyst: how many lives, and what score per kill? I suggest three lives and leave the numbers to the requirements.
+2. Designer: the form of the enemy locator (M8) and the HUD layout, both original.
+3. Analyst and Designer: the arena edge. Either the arena is bounded or it wraps around; it must not let the player drive away from the fight forever.
