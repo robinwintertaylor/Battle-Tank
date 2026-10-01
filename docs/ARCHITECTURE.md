@@ -1,7 +1,7 @@
 ---
 title: "Wireframe Tanks — architecture"
 tags: [wireframe-tanks, design, architecture]
-status: draft for the design gate
+status: approved at the design gate 2026-10-01 (D-112)
 created: 2026-10-01
 ---
 

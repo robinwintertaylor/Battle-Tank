@@ -4,13 +4,13 @@ One file per significant decision. Each record states the context, the real opti
 
 | ADR | Title | Status |
 |---|---|---|
-| [0001](0001-canvas-2d-renderer.md) | Canvas 2D renderer behind a line-segment interface | Proposed |
-| [0002](0002-plain-javascript-no-build.md) | Plain JavaScript modules, no build step | Proposed |
-| [0003](0003-fixed-timestep-deterministic-simulation.md) | Fixed-timestep, deterministic simulation | Proposed |
-| [0004](0004-entity-collection-and-controllers.md) | Tank collection with one controller per tank | Proposed |
-| [0005](0005-html-screens-canvas-play.md) | HTML screens over a canvas for play | Proposed; Designer agreed (UX-D1) |
-| [0006](0006-hand-written-web-audio.md) | Hand-written Web Audio sound effects | Proposed |
-| [0007](0007-github-pages-from-site-folder.md) | Publish only `site/` to GitHub Pages | Proposed |
-| [0008](0008-test-hook-without-url.md) | Test hook switched on without the URL | Proposed |
+| [0001](0001-canvas-2d-renderer.md) | Canvas 2D renderer behind a line-segment interface | Accepted |
+| [0002](0002-plain-javascript-no-build.md) | Plain JavaScript modules, no build step | Accepted |
+| [0003](0003-fixed-timestep-deterministic-simulation.md) | Fixed-timestep, deterministic simulation | Accepted |
+| [0004](0004-entity-collection-and-controllers.md) | Tank collection with one controller per tank | Accepted |
+| [0005](0005-html-screens-canvas-play.md) | HTML screens over a canvas for play | Accepted |
+| [0006](0006-hand-written-web-audio.md) | Hand-written Web Audio sound effects | Accepted |
+| [0007](0007-github-pages-from-site-folder.md) | Publish only `site/` to GitHub Pages | Accepted |
+| [0008](0008-test-hook-without-url.md) | Test hook switched on without the URL | Accepted |
 
-"Proposed" becomes "Accepted" when Robin approves the design at the design gate.
+All eight were accepted when Robin approved the design on 2026-10-01 (Cortex D-112).

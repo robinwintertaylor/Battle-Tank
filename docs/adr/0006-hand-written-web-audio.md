@@ -1,6 +1,6 @@
 # ADR 0006: Hand-written Web Audio sound effects
 
-**Status:** Proposed. **Date:** 2026-10-01. **Author:** Architect.
+**Status:** Accepted by Robin at the design gate, 2026-10-01 (D-112). **Date:** 2026-10-01. **Author:** Architect.
 
 ## Context
 
