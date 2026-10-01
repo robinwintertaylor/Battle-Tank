@@ -7,11 +7,11 @@ created: 2026-10-01
 
 # Wireframe Tanks — test strategy
 
-**Author:** Tester. **Date:** 2026-10-01. **Stage:** Requirements and Design (merged). **Inputs:** `docs/IDEA_BRIEF.md`, `docs/RESEARCH_BRIEF.md`, `docs/PRODUCT_BRIEF.md`, scope decision D-41.
+**Author:** Tester. **Date:** 2026-10-01. **Stage:** Requirements and Design (merged). **Inputs:** `docs/IDEA_BRIEF.md`, `docs/RESEARCH_BRIEF.md`, `docs/PRODUCT_BRIEF.md`, `docs/REQUIREMENTS.md`, `docs/ARCHITECTURE.md` and ADRs 0001–0008, `docs/THREAT_MODEL.md`, scope decision D-41.
 
 This document says how we will prove Wireframe Tanks works before Robin decides to deploy it: what we test, at which level, with which tools, where the tests run, and when Verify can start and finish. It is sized for a small static game with no backend.
 
-`REQUIREMENTS.md`, `UX_SPEC.md` and `ARCHITECTURE.md` are being written in parallel with this document. Until they land, the traceability table in section 10 is keyed to the product brief's feature IDs (M1–M12, S1–S5, C1–C4). Once the Analyst's numbered requirements are on `main`, I will add the requirement numbers to that table and break each row down to one test per acceptance criterion.
+Section 10 traces every acceptance criterion, business rule, NFR and security requirement in `REQUIREMENTS.md` (commit `34cab00`) to its tests. `UX_SPEC.md` is still to come; the visual cues and accessibility details it sets will be keyed in when it lands.
 
 ## 1. What we are testing
 
@@ -200,49 +200,207 @@ If a criterion cannot be met, I do not sign off. I report which one and why, and
 | 3 | End-to-end tests that aim and shoot with key presses are flaky | Fixed seed and test hook (T3, T5), so the scenario is the same every run; precise hit logic is tested at unit level instead. |
 | 4 | No Mac available, so Safari is untested | WebKit in CI as a proxy, and the report says plainly that Safari was not tested. |
 | 5 | Screens drawn on the canvas cannot be checked for accessibility automatically | T6, or manual checks recorded in the report. |
-| 6 | Requirements numbers change after this document | I update section 10 when `REQUIREMENTS.md` lands and again before Verify. |
+| 6 | Requirements numbers change after this document | Section 10 is keyed to `REQUIREMENTS.md` at `34cab00`. I recheck it whenever that file changes and again before Verify. |
 
-## 10. Traceability (skeleton)
+## 10. Traceability
 
-Keyed to the product brief until the Analyst's numbers land. The **REQ** column will hold the requirement numbers from `REQUIREMENTS.md`, and the test IDs will be split into one per acceptance criterion. Test ID prefixes: `UT` unit, `E2E` end to end, `PERF` performance, `A11Y` accessibility, `MAN` manual.
+Keyed to `REQUIREMENTS.md` at commit `34cab00`. Every acceptance criterion, business rule, NFR and security requirement maps to at least one test. Product-brief IDs are kept in the US rows so each test still traces back to the brief. The Analyst keeps `REQUIREMENTS.md` §12 at the summary level; this section is the detailed table, and the two are kept in step.
 
-| Feature | REQ | Unit | End to end | Other | Status |
-|---|---|---|---|---|---|
-| M1 Start screen, controls shown, key press starts | TBD | | E2E-01, E2E-02 | A11Y-01 | Not started |
-| M2 First-person wireframe view with horizon | TBD | UT-PROJ | E2E-02 | MAN-IP | Not started |
-| M3 Forward, reverse, turn; physical keys | TBD | UT-MOVE | E2E-03 | MAN-KEYS | Not started |
-| M4 Fire; one shell in flight | TBD | UT-SHELL | E2E-04 | | Not started |
-| M5 Obstacles block tanks and shells | TBD | UT-MOVE, UT-SHELL | | | Not started |
-| M6 Enemy approaches, aims, fires; safe spawn; grace period | TBD | UT-AI | E2E-05 | | Not started |
-| M7 Hits destroy; new enemy after a kill | TBD | UT-HIT | E2E-05 | | Not started |
-| M8 Enemy locator | TBD | UT-LOC | E2E-02 | A11Y-CONTRAST | Not started |
-| M9 Score, lives, game over, restart | TBD | UT-SCORE | E2E-05, E2E-06 | | Not started |
-| M10 Same speed at any refresh rate | TBD | UT-LOOP | | PERF-HZ | Not started |
-| M11 No "Battlezone"; original art and sound | TBD | | E2E-10 | MAN-IP | Not started |
-| M12 Static, no network calls after load | TBD | | E2E-09 | | Not started |
-| S1 Synthesised sound effects | TBD | | E2E-08 | MAN-IP | Not started |
-| S2 Mute key | TBD | | E2E-08 | | Not started |
-| S3 Difficulty rises with score | TBD | UT-DIFF | | | Not started |
-| S4 Pause key; auto-pause on focus loss | TBD | UT-LOOP | E2E-07 | | Not started |
-| S5 Visible hit feedback | TBD | | E2E-05 | A11Y-FLASH | Not started |
-| C1 Best score in local storage | TBD | UT-SCORE | E2E-06 | | If built |
-| C2 Horizon scenery | TBD | | | MAN-IP | If built |
-| C3 Engine sound | TBD | | | MAN-IP | If built |
-| C4 Wireframe explosion | TBD | | | A11Y-FLASH | If built |
-| NFR 60 fps | TBD | | | PERF-FPS | Not started |
-| NFR page weight under 500 KB | TBD | | | PERF-SIZE | Not started |
-| NFR no console errors | TBD | | E2E-11 | | Not started |
-| NFR accessibility (from `UX_SPEC.md`) | TBD | | | A11Y-01 to A11Y-n | Not started |
-| Security requirements (from `THREAT_MODEL.md`) | TBD | | E2E-11 (CSP) | | Not started |
+### 10.1 Test catalogue
 
-The Analyst and I will keep this table in step: every requirement needs at least one test, and every test traces back to a requirement.
+Test ID prefixes: `UT` unit (Node, `node:test`), `E2E` end to end (Playwright), `BUILD` checks on the built `site/` in CI, `LINT` lint rules, `PERF` performance, `A11Y` accessibility, `MAN` manual, `SET` repository and account settings checked at the deploy gate.
+
+**Unit test groups.** Each group is one test file over `core/` (or a pure helper), with one named test per acceptance criterion or business rule it covers, named after that ID (for example `AC-07.2 shell 3.1 u from centre does not hit`).
+
+| ID | Covers |
+|---|---|
+| UT-PROJ | Camera transform, near-plane clipping, projection, aspect ratio (`camera.js`) |
+| UT-SCENE | Scene building: what is in the segment list, horizon, culling (`scene.js`) |
+| UT-MOVE | Player and enemy movement, key combinations as input snapshots |
+| UT-COLL | Tank against obstacle, boundary and other tank (`collision.js`) |
+| UT-SHELL | Firing, one shell per tank, player reload, range, removal |
+| UT-HIT | Swept hit test, ownership, obstacle-before-tank, same-step destruction |
+| UT-SPAWN | Enemy spawn distance and clearance, the 50-attempt fallback, player respawn point |
+| UT-AI | Enemy state machine, grace period, fire conditions, 100-seed reachability run |
+| UT-SCORE | Score, lives, respawn timers, game over, restart lockout, new-game reset |
+| UT-FLOW | Screen state machine (§8.1), pause and auto-pause, input ignored per screen |
+| UT-DIFF | Level formula, difficulty table lookup at spawn, monotonic table |
+| UT-LOOP | Fixed step, refresh-rate independence, frame clamp (`loop.js` `advance`) |
+| UT-DET | Same seed and inputs give an identical state log |
+| UT-CONFIG | Constants and obstacle layout: 12 obstacles, clear radius, inside the boundary, every open area reachable |
+| UT-HUD | Locator bearing, hit feedback duration and flash count, reduced-motion flag (`hud.js`) |
+| UT-STORE | Best-score key, validation and storage errors, using a fake storage object |
+| UT-INPUT | Key mapping table and auto-repeat filtering, if `input.js` keeps them in a pure function; otherwise covered by E2E-03 and E2E-04 only |
+
+**End-to-end scenarios.** E2E-01 to E2E-12 are defined in section 3.2. New ones:
+
+| ID | Scenario | Covers |
+|---|---|---|
+| E2E-13 | **Sub-path hosting.** Serve `site/` under `/wireframe-tanks/` and rerun E2E-01, E2E-02, E2E-09 and E2E-11 there. Every request the page makes must stay under that sub-path, and none may 404. | NFR-07 |
+| E2E-14 | **Reduced motion.** With `prefers-reduced-motion: reduce` emulated and a fixed seed, get the player hit and check through the snapshot that no camera shake or other non-essential motion is applied during the hit effect. Then repeat without the setting to show the check can fail. | NFR-16, AC-14.3 |
+| E2E-15 | **Playable muted.** Mute before starting and play a seeded game. For every `shot`, `tank-hit`, `player-hit` and `enemy-spawned` event, the visual cue named in `UX_SPEC.md` for it must be present in the snapshot within the same frame. | NFR-17 |
+| E2E-16 | **Privacy and storage.** After a full game: no cookies in the browser context and `document.cookie` is empty; `localStorage` holds no key except `wireframe-tanks:best-score`; `sessionStorage` is empty; no IndexedDB database, Cache Storage entry or service worker exists. | NFR-19, SEC-21 |
+| E2E-17 | **Throttled load.** Chromium only, because network throttling needs its DevTools protocol: 10 Mbit/s, 40 ms latency, empty cache. The Start screen must accept a key within 2 s of navigation. | NFR-20 |
+| E2E-18 | **Resize.** Resize the window between two aspect ratios mid-game. The canvas fills the area, the horizon stays level, and the projection is not stretched. | AC-02.5 |
+
+**Build, lint and settings checks.**
+
+| ID | Check | Covers |
+|---|---|---|
+| BUILD-01 | **Deployed artifact allowlist.** List every file in the Pages artifact. Fail on anything outside `site/`'s runtime files: no `docs/`, tests, `package.json`, lockfile, dotfiles, source maps or development config. Also fail on any local path (`C:\Users`, `/home/`, `/Users/`) in a shipped file. | NFR-12, SEC-16 |
+| BUILD-02 | **Own code only.** No `http:` or `https:` URL to another origin in any shipped file. No `<script>` without `src`, no `style` attribute or `<style>` element, and no `on…=` handler in shipped HTML. No audio or font files. | SEC-1, SEC-18, NFR-06, NFR-11, AC-11.4 |
+| BUILD-03 | **CSP.** The built `index.html` has the SEC-17 `<meta http-equiv="Content-Security-Policy">` as the first child of `<head>`, and it is at least as strict as the SEC-17 baseline. It also has `<meta name="referrer" content="no-referrer">`. | SEC-17, SEC-20 |
+| BUILD-04 | **Name search.** A case-insensitive search for "battlezone" across every file in the artifact finds nothing. | NFR-10 |
+| LINT-01 | ESLint bans `eval`, `new Function`, string timers and HTML sinks; DOM text goes through `textContent`. | SEC-19 |
+| LINT-02 | ESLint bans browser globals and `Math.random` in `core/` (ARCHITECTURE.md §7). | NFR-21, NFR-23 |
+| LINT-03 | The end-to-end suite may not use the mouse: `page.mouse`, `click`, `dblclick`, `hover` and `tap` are banned in `tests/e2e/`. Every scenario therefore proves keyboard-only play. | NFR-13 |
+| SET-01 | Settings and workflow checklist at the deploy gate, done with Security: lockfile and `npm ci`, install scripts off, Dependabot and audit gate, Actions pinned to SHAs, least-privilege permissions, OIDC deploy, environment restricted to `main`, 2FA, ruleset, one-way mirror and its token, history and CI secret scans, HTTPS. Each item is recorded as seen, with a link or screenshot. | SEC-3 to SEC-16, SEC-23 |
+
+**Performance, accessibility and manual checks** are as in sections 3.3 to 3.5: PERF-SIZE, PERF-FPS, PERF-SMOKE, PERF-HZ, A11Y-01 (axe on HTML screens and page basics), A11Y-CONTRAST, A11Y-FLASH, MAN-IP, MAN-KEYS, MAN-EXPLORE and MAN-PLAY.
+
+### 10.2 User stories
+
+| AC | Pri | Unit | End to end | Other |
+|---|---|---|---|---|
+| AC-01.1 Start screen content | Must | | E2E-01 | A11Y-01 |
+| AC-01.2 Accepted key starts a game | Must | UT-FLOW | E2E-02 | |
+| AC-01.3 Modifier, Tab and F-keys do not start | Must | UT-FLOW | E2E-02 | |
+| AC-01.4 No sound before first key | Must | | E2E-08 | |
+| AC-02.1 First-person view with horizon | Must | UT-PROJ, UT-SCENE | E2E-02 | |
+| AC-02.2 See-through lines | Must | UT-SCENE | | MAN-EXPLORE |
+| AC-02.3 Nothing behind is drawn | Must | UT-PROJ | | |
+| AC-02.4 Near-plane clipping | Must | UT-PROJ | | |
+| AC-02.5 Resize without stretching | Must | UT-PROJ | E2E-18 | |
+| AC-03.1 to AC-03.3 Forward, reverse, turn rates | Must | UT-MOVE | E2E-03 | |
+| AC-03.4 Drive and turn together | Must | UT-MOVE | E2E-03 | MAN-KEYS |
+| AC-03.5 Opposite keys cancel | Must | UT-MOVE | | |
+| AC-03.6 Non-QWERTY layout | Must | UT-INPUT | E2E-03 | MAN-KEYS |
+| AC-03.7 No page scroll | Must | | E2E-03 | |
+| AC-03.8 Held keys released on blur | Must | | E2E-07 | |
+| AC-04.1 Shell created, 80 u/s | Must | UT-SHELL | E2E-04 | |
+| AC-04.2 One shell in flight, nothing queued | Must | UT-SHELL | E2E-04 | |
+| AC-04.3 Holding Space fires once | Must | UT-INPUT | E2E-04 | |
+| AC-04.4 Range 200 u | Must | UT-SHELL | | |
+| AC-04.5 0.5 s player reload | Must | UT-SHELL | | |
+| AC-05.1 12 obstacles, fixed layout | Must | UT-CONFIG | E2E-05 | |
+| AC-05.2 No overlap with obstacles | Must | UT-COLL | | |
+| AC-05.3 Shells stop at obstacles | Must | UT-HIT | | |
+| AC-05.4 Boundary holds tanks | Must | UT-COLL | | |
+| AC-05.5 Shells removed at boundary | Must | UT-SHELL | | |
+| AC-05.6 Spawn clear radius | Must | UT-CONFIG | | |
+| AC-05.7 Edge is visible | Must | UT-SCENE | | MAN-EXPLORE |
+| AC-06.1 Spawn distance and clearance | Must | UT-SPAWN | | |
+| AC-06.2 Grace period | Must | UT-AI | | |
+| AC-06.3 Fires when conditions hold | Must | UT-AI | E2E-05 | |
+| AC-06.4 No fire outside aim tolerance | Must | UT-AI | | |
+| AC-06.5 Reaches a firing position in 95 of 100 seeds | Must | UT-AI | | |
+| AC-06.6 One enemy shell in flight | Must | UT-SHELL | | |
+| AC-06.7 Deterministic enemy | Must | UT-AI, UT-DET | | |
+| AC-07.1 Hit within 3 u | Must | UT-HIT | E2E-05 | |
+| AC-07.2 Miss at 3.1 u | Must | UT-HIT | | |
+| AC-07.3 Swept hit test | Must | UT-HIT | | |
+| AC-07.4 New enemy after 1.5 s | Must | UT-SPAWN | E2E-05 | |
+| AC-07.5 No self-hits | Must | UT-HIT | | |
+| AC-07.6 Enemy shell kills player | Must | UT-HIT | E2E-06 | |
+| AC-08.1 Bearing within ±5° | Must | UT-HUD | E2E-02 | |
+| AC-08.2 Behind is distinguishable | Must | UT-HUD | | A11Y-CONTRAST |
+| AC-08.3 No enemy shown during respawn | Must | UT-HUD | | |
+| AC-08.4 Updates in the same frame | Must | UT-HUD | | |
+| AC-09.1 Score 0, lives 3 | Must | UT-SCORE | E2E-02 | |
+| AC-09.2 +100 per kill | Must | UT-SCORE | E2E-05 | |
+| AC-09.3 Death, respawn after 2.0 s | Must | UT-SCORE, UT-SPAWN | E2E-06 | |
+| AC-09.4 Game over after last life | Must | UT-SCORE, UT-FLOW | E2E-06 | |
+| AC-09.5 1.0 s restart lockout | Must | UT-FLOW | E2E-06 | |
+| AC-09.6 Restart without reload | Must | UT-SCORE | E2E-06 | |
+| AC-09.7 Same-step destruction | Must | UT-HIT, UT-SCORE | | |
+| AC-10.1 Pause freezes everything | Should | UT-FLOW | E2E-07 | |
+| AC-10.2 Resume from the same state | Should | UT-FLOW | E2E-07 | |
+| AC-10.3 Auto-pause on hide or blur | Should | | E2E-07 | |
+| AC-10.4 No auto-resume | Should | | E2E-07 | |
+| AC-10.5 Paused screen says how to resume | Should | | E2E-07 | A11Y-01 |
+| AC-10.6 Game keys do nothing while paused | Should | UT-FLOW | E2E-07 | |
+| AC-11.1 to AC-11.3 Shot, explosion, warning sounds | Should | | E2E-08 | |
+| AC-11.4 No audio files | Should | | | BUILD-02 |
+| AC-12.1, AC-12.2 Mute toggles on every screen | Should | | E2E-08 | |
+| AC-12.3 Mute shown on screen | Should | UT-HUD | E2E-08 | |
+| AC-13.1 to AC-13.3 Level thresholds and cap | Should | UT-DIFF | | |
+| AC-13.4 Level fixed at spawn | Should | UT-DIFF | | |
+| AC-13.5 Table never gets easier | Should | UT-CONFIG | | |
+| AC-14.1 Hit effect, 0.75 s | Should | UT-HUD | E2E-06 | |
+| AC-14.2 At most three flashes a second | Should | UT-HUD | | A11Y-FLASH |
+| AC-14.3 Reduced motion | Should | UT-HUD | E2E-14 | |
+| AC-15.1 Best score stored under the key | Could | UT-STORE | E2E-16 | |
+| AC-15.2 Best score on game-over screen | Could | | E2E-06 | |
+| AC-15.3 Invalid stored value treated as 0 | Could | UT-STORE | | |
+| AC-15.4 Storage errors tolerated | Could | UT-STORE | | |
+| AC-16.1, AC-16.2 Horizon scenery | Could | UT-SCENE | | MAN-IP |
+| AC-17.1, AC-17.2 Engine sound | Could | | E2E-08 | |
+| AC-18.1 Explosion fragments within 2.0 s | Could | UT-SCENE | | |
+| AC-18.2 Explosion flash limit | Could | UT-HUD | | A11Y-FLASH |
+
+How E2E-08 observes sound: the end-to-end test cannot listen to the speakers. An init script wraps `AudioContext` so the test can count started sources and read the master gain, and the snapshot's `muted` flag and the event log say what should have played. Whether each sound is pleasant and original is a MAN-IP judgement.
+
+### 10.3 Business rules
+
+Every business rule has at least one named unit test: BR-01 UT-INPUT and E2E-03/04; BR-02, BR-03 UT-MOVE; BR-04 UT-COLL; BR-05 UT-COLL, UT-SHELL; BR-06 UT-CONFIG; BR-07, BR-08 UT-SHELL; BR-09, BR-10, BR-21 UT-HIT; BR-11, BR-12, BR-13 UT-SCORE; BR-14 UT-SPAWN; BR-15, BR-16 UT-AI; BR-17 UT-DIFF; BR-18, BR-19, BR-20, BR-22 UT-FLOW; BR-23 E2E-08. NFR-24 requires a test named after each BR.
+
+### 10.4 Non-functional requirements
+
+| NFR | Pri | Tests |
+|---|---|---|
+| NFR-01 Frame rate | Must | PERF-FPS (manual, stated hardware), PERF-SMOKE (CI) |
+| NFR-02 Same speed at any refresh rate | Must | UT-LOOP (30, 60 and 144 Hz), PERF-HZ |
+| NFR-03 No catch-up jump | Must | UT-LOOP |
+| NFR-04 Page weight | Must | PERF-SIZE (file total and bytes transferred) |
+| NFR-05 No network calls after load | Must | E2E-09 |
+| NFR-06 Static site | Must | BUILD-01, BUILD-02 |
+| NFR-07 Sub-path hosting | Must | **E2E-13** |
+| NFR-08 Browser support | Must | E2E suite in Chromium, Firefox, WebKit; manual pass in Chrome, Edge, Firefox |
+| NFR-09 No console errors or CSP violations | Must | E2E-11 |
+| NFR-10 No "battlezone" | Must | E2E-10, BUILD-04 |
+| NFR-11 Original assets | Must | MAN-IP, BUILD-02 |
+| NFR-12 Deployed artifact | Must | **BUILD-01** |
+| NFR-13 Keyboard only | Must | LINT-03 over the whole E2E suite |
+| NFR-14 No harmful flashing | Must | UT-HUD, A11Y-FLASH |
+| NFR-15 Contrast | Must | A11Y-CONTRAST |
+| NFR-16 Reduced motion | Should | **E2E-14**, UT-HUD |
+| NFR-17 Sound is never the only cue | Must | **E2E-15** |
+| NFR-18 Page basics and axe | Must | A11Y-01 |
+| NFR-19 Privacy | Must | **E2E-16** |
+| NFR-20 Load time | Should | E2E-17 |
+| NFR-21 Determinism | Must | UT-DET, LINT-02 |
+| NFR-22 Test hook | Must | E2E-12 |
+| NFR-23 Logic runs in Node | Must | The whole UT suite runs under Node with no DOM; LINT-02 |
+| NFR-24 Coverage | Must | Coverage gate in CI (90% lines of `core/`), and the BR naming check in 10.3 |
+
+### 10.5 Security requirements
+
+| SEC | Level | Tests |
+|---|---|---|
+| SEC-1 No runtime dependencies or third-party assets | Must | BUILD-02, E2E-09 |
+| SEC-2 Dev dependencies limited and listed | Must | PR review by Security; SET-01 compares `package.json` to ARCHITECTURE.md |
+| SEC-3 to SEC-16 Supply chain, CI, repository and account | per §7 | SET-01 |
+| SEC-17 CSP | Must | BUILD-03, E2E-11 (zero violations) |
+| SEC-18 No inline script or style | Must | BUILD-02 |
+| SEC-19 No eval or HTML sinks | Must | LINT-01 |
+| SEC-20 No-referrer, nothing read from the URL | Should | BUILD-03, E2E-12; code review |
+| SEC-21 Namespaced best-score key | Should | UT-STORE, E2E-16 |
+| SEC-22 Stored value validated | Should | UT-STORE |
+| SEC-23 HTTPS on Pages | Must | SET-01; smoke test of the live URL after Robin's deploy go-ahead |
+
+### 10.6 Notes for the design
+
+- **Event log for end-to-end tests.** ARCHITECTURE.md §4 clears `state.events` at the start of every step. For E2E-08 and E2E-15 the test hook's `events()` must return every event since load (or a bounded recent history, for example the last 1,000), each with its simulation time, not only the current step's. Otherwise a test that polls between frames misses events. This is a detail of `test-hook.js`, not a change to the simulation.
+- **Visual cues per sound (E2E-15).** The test needs `UX_SPEC.md` to name the visual cue for each sound event.
+- **Shake flag (E2E-14).** If reduced motion is honoured in `hud.js` or `scene.js`, the snapshot should carry the camera or shake offset in use, so the test can see it is zero.
 
 ## 11. Deliverables from me
 
 | When | What |
 |---|---|
 | Now (Design) | This strategy. |
-| When `REQUIREMENTS.md` lands | Numbered test cases per acceptance criterion, and the filled-in traceability table. |
+| Done (`34cab00`) | Traceability from every requirement to its tests (section 10). |
+| When `UX_SPEC.md` lands | Visual cues per sound for E2E-15, accessibility checks keyed to the Designer's requirements. |
 | Build | The Playwright suite and the performance and "Battlezone" checks, alongside the Developer's unit tests and the Engineer's CI. |
 | Verify | Test execution, defects as Buzz issues, retests. |
 | End of Verify | `docs/TEST_REPORT.md`: coverage, results, open defects with severity, and a go/no-go recommendation. |
