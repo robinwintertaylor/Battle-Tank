@@ -124,7 +124,8 @@ docs/          stage artifacts, ADRs in docs/adr/
 package.json   "private": true, "type": "module", devDependencies only
 package-lock.json
 eslint.config.js
-jsconfig.json  checkJs, strict, noEmit
+jsconfig.json  checkJs, strict, noEmit; site/src only, no Node types
+jsconfig.node.json  the same for scripts/ and test/, with Node types
 .npmrc         ignore-scripts=true (SEC-4)
 .github/workflows/  Engineer owns
 ```
@@ -404,6 +405,7 @@ The complete list. Nothing here ships to players.
 | `@eslint/js` | ESLint's recommended rule set | Developer |
 | `@playwright/test` | End-to-end tests in Chromium, Firefox and WebKit | Tester |
 | `@axe-core/playwright` | Automated accessibility checks | Tester |
+| `@types/node` | Node types for `tsc -p jsconfig.node.json`, which checks `scripts/` and `test/`. `site/` keeps `"types": []`, so browser code can't see Node APIs | Engineer |
 
 The secret scanner (SEC-14, SEC-15) is a CI tool chosen by the Engineer, not an npm package. Any further dev dependency needs a reason in the PR that adds it (SEC-2) and my review.
 
@@ -431,12 +433,13 @@ flowchart LR
   Dev[Agent clone] -->|PR, review, merge| Relay[(Buzz relay<br/>main)]
   Relay -->|one-way mirror push<br/>SEC-12, SEC-13| GH[(GitHub<br/>public repo, main)]
   GH --> CI[Actions: lint, typecheck,<br/>unit + coverage, size,<br/>Playwright x3, secret scan]
-  CI -->|only after Robin's go-ahead:<br/>upload-pages-artifact site/,<br/>deploy-pages via OIDC| Pages[robin.github.io/wireframe-tanks]
+  CI -->|only after Robin's go-ahead:<br/>upload-pages-artifact site/,<br/>deploy-pages via OIDC| Pages[robinwintertaylor.github.io/Battle-Tank]
 ```
 
 - **Artifact:** the `site/` folder exactly as committed. No build. What was tested is byte-for-byte what is served.
 - **Only `site/` is published.** `docs/`, tests and scripts stay in the repository and are never served.
 - **Source of truth:** the Buzz relay repo. GitHub receives one-way mirror pushes (SEC-12).
+- **Mirror repo name:** `robinwintertaylor/Battle-Tank`, the repo Robin created. Pages serves it under `/Battle-Tank/`, and `scripts/serve.js` uses the same path locally. Every URL in `site/` is relative, so a later rename of the repo changes only the address, not the code. The game is called Wireframe Tanks on screen.
 - **CI before merge:** PRs are reviewed on the relay, but GitHub Actions runs on the mirror. So until the mirror exists, the Developer attaches local evidence (`npm test`, lint, typecheck, size) to each PR. How PR branches reach CI before merge is the Engineer's design in the CI issue.
 - **Deploy:** GitHub's `upload-pages-artifact` and `deploy-pages` flow with OIDC, no stored secret, through the `github-pages` environment restricted to `main` (SEC-8, SEC-9). The first deploy, and creating the public repo at all, waits for Robin's go-ahead (playbook rule 6).
 - **Environments:** local (`node scripts/serve.js`), CI (the same server), and production on Pages. No staging: the CI run against the exact artifact is the staging check, which is proportionate for a static game.
