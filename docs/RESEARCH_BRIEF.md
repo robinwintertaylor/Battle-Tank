@@ -211,6 +211,10 @@ Points to note:
 
 **Recommendation:** GitHub Pages if a public GitHub mirror is acceptable, because it is the option named in the idea brief and the simplest to run. Otherwise Cloudflare Pages, which can deploy without the source being public. The Engineer should confirm Cloudflare's bandwidth terms before relying on them.
 
+**Update 2026-10-01:** Robin chose public GitHub Pages.
+
+A static host cannot run a game server. So the multiplayer planned for phase 2 will need separate hosting research when that phase starts.
+
 ## 9. Risks
 
 | # | Risk | Likelihood | Impact | Mitigation |
@@ -227,8 +231,8 @@ Points to note:
 
 **For Robin**
 
-1. Is a public GitHub mirror of the source acceptable? It decides between GitHub Pages and Cloudflare Pages.
-2. Is this strictly a free hobby project? Any plan to charge or carry adverts raises the IP risk and breaks GitHub Pages' terms. [24]
+1. ~~Is a public GitHub mirror of the source acceptable?~~ **Answered 2026-10-01: yes.** Robin has a GitHub account, so the host is GitHub Pages from a public repository.
+2. ~~Is this strictly a free hobby project?~~ **Answered 2026-10-01: yes, free hobby "for now".** If that changes, revisit section 4 and GitHub Pages' terms. [24]
 3. Do you want the UK and EU trademark registers checked, or a lawyer's view, before release? I would not spend money on this for a free hobby game.
 
 **For Product**
