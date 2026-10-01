@@ -1,0 +1,3 @@
+#!/bin/sh
+# Opt in with `npm run hooks`. Runs the same checks as CI's first job.
+exec npm run --silent check

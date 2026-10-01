@@ -1,0 +1,18 @@
+# SEC-5 and SEC-6: keep npm dev dependencies and pinned Actions current.
+# Dependabot PRs open on the GitHub mirror; land them through the relay.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dev-dependencies:
+        patterns: ['*']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']

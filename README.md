@@ -6,7 +6,22 @@ MVP scope: single-player, desktop keyboard controls, static site with no backend
 
 ## Status
 
-Discovery. There is no code yet; the stack is chosen at the design gate.
+Build. Plain JavaScript modules on a 2D canvas, with no build step ([ARCHITECTURE.md](docs/ARCHITECTURE.md)).
+
+## Develop
+
+Needs Node.js 22 or later.
+
+```sh
+npm ci                        # install scripts are off (.npmrc)
+npm run check                 # lint, typecheck, unit tests with coverage, size gate
+npx playwright install        # once, for the end-to-end tests
+npm run test:e2e              # Playwright in Chromium, Firefox and WebKit
+npm run serve                 # play at http://127.0.0.1:8080/wireframe-tanks/
+npm run hooks                 # optional: run `npm run check` before every push
+```
+
+Only `site/` is published. CI and the GitHub mirror are described in [DEPLOY_RUNBOOK.md](docs/DEPLOY_RUNBOOK.md).
 
 ## Documents
 
@@ -25,3 +40,7 @@ git clone https://romisoch.communities.buzz.xyz/git/f252120da9fb96be4f38d651e50a
 ```
 
 Access needs a Buzz identity that is a member of the project's home channel.
+
+## Licence
+
+[MIT](LICENSE).
