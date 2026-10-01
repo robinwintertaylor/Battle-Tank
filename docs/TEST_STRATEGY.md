@@ -34,7 +34,7 @@ These shape the architecture, so I am asking for them now. They go to the Archit
 | T2 | **Injectable clock.** The loop takes elapsed time from the caller instead of reading it directly. | Lets a test run the simulation at 60 Hz and at 144 Hz and compare (M10), and test the clamp after a background tab (research §6). |
 | T3 | **Seedable random numbers.** All randomness (spawn position, AI wander) goes through one seeded generator. | Repeatable tests and repeatable defect reports. |
 | T4 | **The renderer takes a list of 3D or 2D line segments.** | Tests can check *what* is drawn (enemy visible, locator pointing the right way, hit flash shown) without comparing screenshots pixel by pixel. |
-| T5 | **A read-only test hook in the page.** For example, when the URL contains `?test`, the page exposes a frozen snapshot of the game state (screen, score, lives, positions) and lets a test set the seed. It must not let a test change the game in ways a player cannot. | End-to-end tests can assert "game over screen with score 300" without reading pixels off a canvas. |
+| T5 | **A read-only test hook in the page.** The page exposes a frozen snapshot of the game state (screen, score, lives, positions) and lets a test set the seed. It must not let a test change the game in ways a player cannot. **Resolved by ADR 0008:** Playwright sets `window.__WT_TEST__ = { seed }` with `page.addInitScript` before load, and the page then adds `snapshot()` and `events()`. Nothing is read from the URL, so SEC-20 holds. | End-to-end tests can assert "game over screen with score 300" without reading pixels off a canvas. |
 | T6 | **Start, pause and game-over screens are HTML over the canvas**, not drawn on it, *if the Designer agrees.* | Text on a canvas is invisible to screen readers and to automated accessibility checks. This is the Designer's call; if the screens stay on the canvas, accessibility testing for them becomes manual (section 6). |
 
 If the Architect chooses differently on any of these, I will adjust this strategy and say which tests move from automated to manual.
@@ -54,7 +54,7 @@ If the Architect chooses differently on any of these, I will adjust this strateg
 - Difficulty: the three numbers per level (turn rate, aim tolerance, reload time) change at the score thresholds the Analyst sets (S3).
 - Loop timing (M10): running the same inputs for 10 simulated seconds at 60 Hz and at 144 Hz frame intervals ends in the same state; a 5-second gap (background tab) is clamped and does not teleport anything.
 
-**Tool:** whatever the Architect picks for the stack. My recommendation is Vitest if there is a build step, or Node's built-in `node:test` if there is none, so we add no dependency we do not need. Both run headless in CI in seconds.
+**Tool:** Node's built-in `node:test` runner and its built-in coverage (ADR 0002: no build step). It runs headless in CI in seconds and adds no dependency.
 
 **Target:** at least 90% line coverage of the simulation modules, and every business rule in `REQUIREMENTS.md` covered by at least one named test. Coverage of drawing, audio and input glue is not targeted; the end-to-end tests cover those.
 
@@ -86,6 +86,9 @@ If the Architect chooses differently on any of these, I will adjust this strateg
 9. **No network calls after load:** every request is recorded from page open to the end of a full game; after the `load` event the count must be zero (M12, metric 4).
 10. **No "Battlezone":** the page title, every `<meta>` tag, the URL path and all visible text on every screen contain no case-insensitive match for "battlezone" (M11, metric 6).
 11. No uncaught errors or console errors during any of the above, in all three browsers.
+12. **Test hook is inert for players** (ADR 0008): with no `window.__WT_TEST__` set, the page exposes no `snapshot` or `events` function. With it set, mutating the object returned by `snapshot()` throws or has no effect on the game.
+
+**Spike early in Build (ADR 0008 depends on it):** confirm in Chromium, Firefox and WebKit that (a) `page.addInitScript` still runs with the shipped CSP `<meta>` tag in place, without `bypassCSP`, and (b) `page.clock` drives `requestAnimationFrame`, so time-dependent scenarios can fast-forward deterministically. If (a) fails, end-to-end tests use `bypassCSP` and the CSP check (SEC-17) runs in its own context without it. If (b) fails, long scenarios such as losing all lives run in real time with longer timeouts.
 
 ### 3.3 Performance tests
 
