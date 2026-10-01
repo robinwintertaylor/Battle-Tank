@@ -88,7 +88,37 @@ If the Architect chooses differently on any of these, I will adjust this strateg
 11. No uncaught errors or console errors during any of the above, in all three browsers.
 12. **Test hook is inert for players** (ADR 0008): with no `window.__WT_TEST__` set, the page exposes no `snapshot` or `events` function. With it set, mutating the object returned by `snapshot()` throws or has no effect on the game.
 
-**Spike early in Build (ADR 0008 and BR-24 depend on it):** confirm in Chromium, Firefox and WebKit that (c) headless browsers report `(any-pointer: fine)` as true, otherwise every end-to-end test lands on the Keyboard needed overlay and has to click through it, and (d) E2E-23 can make it false (touch emulation in Chromium; in the other engines, an init script that answers that one `matchMedia` query). Also that (a) `page.addInitScript` still runs with the shipped CSP `<meta>` tag in place, without `bypassCSP`, and (b) `page.clock` drives `requestAnimationFrame`, so time-dependent scenarios can fast-forward deterministically. If (a) fails, end-to-end tests use `bypassCSP` and the CSP check (SEC-17) runs in its own context without it. If (b) fails, long scenarios such as losing all lives run in real time with longer timeouts.
+#### 3.2.1 Build spike T1: results (2026-10-02)
+
+The spike asked four questions that ADR 0008 and BR-24 depend on. All four pass in all three engines, so no fallback is needed. The spike source is in `docs/spikes/t1/`.
+
+**How it was run:** a throwaway page carrying the SEC-17 CSP `<meta>` as the first child of `<head>`, an ES module that sets up a fixed-step (60 Hz) `requestAnimationFrame` loop, and the ADR 0008 hook shape. It used Playwright 1.63.0 with the Desktop Chrome, Firefox and Safari device profiles, run headless in two places:
+- Windows 11, which is a developer machine;
+- the `mcr.microsoft.com/playwright:v1.63.0-noble` container, which is the same Ubuntu base as GitHub-hosted CI.
+
+The CSP was really enforced: `new Function()` threw in every engine.
+
+| # | Question | Chromium | Firefox | WebKit | Decision |
+|---|---|---|---|---|---|
+| a | Does `page.addInitScript` run under the shipped CSP, without `bypassCSP`? | Yes | Yes | Yes | No `bypassCSP` anywhere. `window.__WT_TEST__ = { seed }` is visible when the game module starts. An init script can also wrap `AudioContext` (E2E-08) and `CanvasRenderingContext2D` (E2E-24). |
+| b | Does `page.clock` drive `requestAnimationFrame`? | Yes | Yes | Yes | Use `page.clock.install()` before `goto`, then `runFor()`. It is deterministic: 10 s of clock time gave exactly 600 ticks in every engine, twice in a row, and a paused clock moved 0 ticks in 500 ms of real time. |
+| c | Does headless report `(any-pointer: fine)` as true? | True | True | True | Default end-to-end tests do not see the Keyboard needed overlay and need no workaround. `(pointer: fine)` and `(hover: hover)` are also true. |
+| d | Can E2E-23 make it false? | Yes | Yes | Yes | Use a context with `hasTouch: true`, which makes `(any-pointer: fine)` false and `coarse` true in all three engines. That is simpler than the init-script plan. An init script that answers only that one query also works everywhere and is the fallback. |
+
+**Rules for the end-to-end suite that follow from the spike**
+1. **Never use `page.clock.fastForward()` to advance game time.** It fires one frame per call. Because the game loop clamps a long frame to 250 ms (ADR 0003), 10 s of fast-forward advanced the game by only about 16 ticks, not 600. Always use `runFor()`.
+2. **`runFor()` costs real time, and WebKit is the slowest engine.**
+
+   | Engine | Windows, wall time per game minute | Linux CI image, wall time per game minute |
+   |---|---|---|
+   | Chromium | about 17 s | about 16 s |
+   | Firefox | about 17 s | about 17 s |
+   | WebKit | about 60 s | about 30 s |
+
+   A scenario longer than about 20 s of game time sets its own timeout of at least 2 × the game time plus 30 s. Long scenarios such as losing all lives (E2E-06) are built from the seed so they finish in under a minute of game time.
+3. **Watch CSP violations through the DOM event, not only the console.** An init script records every `securitypolicyviolation` event, and E2E-11 asserts that the list is empty. Playwright's `console` event surfaced the violation in Firefox but not in Chromium or WebKit, so a check based only on the console would miss violations in two engines.
+4. **Web Audio is missing from Playwright's WebKit build on Windows, but present on Linux.** `AudioContext` is `undefined` in Playwright's WebKit build on Windows. E2E-08 and anything else that needs audio skips WebKit on Windows and gives that as the reason; the audio check runs on Linux CI. The game must survive a missing `AudioContext` (sound off, no uncaught error). That is a case for Developer's D6 tests, not just a test-environment quirk.
+5. **`snapshot()` is checked inside the page.** Frozen-ness is lost when `page.evaluate` serialises the object, so E2E-12 asserts `Object.isFrozen` and tries the mutation inside `page.evaluate`.
 
 ### 3.3 Performance tests
 
@@ -133,7 +163,7 @@ Some things are better judged by a person:
 | Mac with Safari | Only if one is available | Safari check. If none is available, the report says Safari was not tested. |
 | GitHub Pages preview | Only after Robin approves deploy | A smoke test of the live site: run scenarios 1, 2, 9 and 10 against the deployed URL. |
 
-The site is served the same way in every environment: built files from a plain static server with no special headers beyond what GitHub Pages provides. If Security's threat model adds a Content Security Policy through a `<meta>` tag, scenario 11 also fails on any CSP violation in the console.
+The site is served the same way in every environment: built files from a plain static server with no special headers beyond what GitHub Pages provides. The threat model sets a Content Security Policy with a `<meta>` tag (SEC-17), so scenario 11 also fails on any CSP violation, recorded through the `securitypolicyviolation` event (§3.2.1, rule 3).
 
 ## 5. How CI runs the tests
 
@@ -201,6 +231,7 @@ If a criterion cannot be met, I do not sign off. I report which one and why, and
 | 4 | No Mac available, so Safari is untested | WebKit in CI as a proxy, and the report says plainly that Safari was not tested. |
 | 5 | Screens drawn on the canvas cannot be checked for accessibility automatically | T6, or manual checks recorded in the report. |
 | 6 | Requirements numbers change after this document | Section 10 is keyed to `REQUIREMENTS.md` revision 3 at `6f44804`. I recheck it whenever that file changes and again before Verify. |
+| 7 | WebKit slows the suite: `page.clock.runFor()` costs about 0.5 × real time on Linux and 1 × on Windows (§3.2.1) | Keep long scenarios short with the seed. If the 10-minute CI budget in §5 is at risk, use the §5 fallback: WebKit moves to a nightly run. |
 
 ## 10. Traceability
 
