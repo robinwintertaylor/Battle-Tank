@@ -7,11 +7,11 @@ created: 2026-10-01
 
 # Wireframe Tanks — test strategy
 
-**Author:** Tester. **Date:** 2026-10-01. **Stage:** Requirements and Design (merged). **Inputs:** `docs/IDEA_BRIEF.md`, `docs/RESEARCH_BRIEF.md`, `docs/PRODUCT_BRIEF.md`, `docs/REQUIREMENTS.md`, `docs/ARCHITECTURE.md` and ADRs 0001–0008, `docs/THREAT_MODEL.md`, scope decision D-41.
+**Author:** Tester. **Date:** 2026-10-01. **Stage:** Requirements and Design (merged). **Inputs:** `docs/IDEA_BRIEF.md`, `docs/RESEARCH_BRIEF.md`, `docs/PRODUCT_BRIEF.md`, `docs/REQUIREMENTS.md`, `docs/UX_SPEC.md`, `docs/ARCHITECTURE.md` and ADRs 0001–0008, `docs/THREAT_MODEL.md`, scope decision D-41.
 
 This document says how we will prove Wireframe Tanks works before Robin decides to deploy it: what we test, at which level, with which tools, where the tests run, and when Verify can start and finish. It is sized for a small static game with no backend.
 
-Section 10 traces every acceptance criterion, business rule, NFR and security requirement in `REQUIREMENTS.md` (commit `34cab00`) to its tests. `UX_SPEC.md` is still to come; the visual cues and accessibility details it sets will be keyed in when it lands.
+Section 10 traces every acceptance criterion, business rule, NFR and security requirement in `REQUIREMENTS.md` (commit `34cab00`) and every accessibility requirement in `UX_SPEC.md` (commit `169b8cc`) to its tests. Section 10.8 lists six places where the two documents disagree; the affected tests wait until those are settled.
 
 ## 1. What we are testing
 
@@ -256,13 +256,13 @@ Test ID prefixes: `UT` unit (Node, `node:test`), `E2E` end to end (Playwright), 
 | LINT-03 | The end-to-end suite may not use the mouse: `page.mouse`, `click`, `dblclick`, `hover` and `tap` are banned in `tests/e2e/`. Every scenario therefore proves keyboard-only play. | NFR-13 |
 | SET-01 | Settings and workflow checklist at the deploy gate, done with Security: lockfile and `npm ci`, install scripts off, Dependabot and audit gate, Actions pinned to SHAs, least-privilege permissions, OIDC deploy, environment restricted to `main`, 2FA, ruleset, one-way mirror and its token, history and CI secret scans, HTTPS. Each item is recorded as seen, with a link or screenshot. | SEC-3 to SEC-16, SEC-23 |
 
-**Performance, accessibility and manual checks** are as in sections 3.3 to 3.5: PERF-SIZE, PERF-FPS, PERF-SMOKE, PERF-HZ, A11Y-01 (axe on HTML screens and page basics), A11Y-CONTRAST, A11Y-FLASH, MAN-IP, MAN-KEYS, MAN-EXPLORE and MAN-PLAY.
+**Performance, accessibility and manual checks** are as in sections 3.3 to 3.5: PERF-SIZE, PERF-FPS, PERF-SMOKE, PERF-HZ, A11Y-AXE (axe on HTML screens and page basics), A11Y-CONTRAST, A11Y-FLASH, MAN-IP, MAN-KEYS, MAN-EXPLORE and MAN-PLAY.
 
 ### 10.2 User stories
 
 | AC | Pri | Unit | End to end | Other |
 |---|---|---|---|---|
-| AC-01.1 Start screen content | Must | | E2E-01 | A11Y-01 |
+| AC-01.1 Start screen content | Must | | E2E-01 | A11Y-AXE |
 | AC-01.2 Accepted key starts a game | Must | UT-FLOW | E2E-02 | |
 | AC-01.3 Modifier, Tab and F-keys do not start | Must | UT-FLOW | E2E-02 | |
 | AC-01.4 No sound before first key | Must | | E2E-08 | |
@@ -317,7 +317,7 @@ Test ID prefixes: `UT` unit (Node, `node:test`), `E2E` end to end (Playwright), 
 | AC-10.2 Resume from the same state | Should | UT-FLOW | E2E-07 | |
 | AC-10.3 Auto-pause on hide or blur | Should | | E2E-07 | |
 | AC-10.4 No auto-resume | Should | | E2E-07 | |
-| AC-10.5 Paused screen says how to resume | Should | | E2E-07 | A11Y-01 |
+| AC-10.5 Paused screen says how to resume | Should | | E2E-07 | A11Y-AXE |
 | AC-10.6 Game keys do nothing while paused | Should | UT-FLOW | E2E-07 | |
 | AC-11.1 to AC-11.3 Shot, explosion, warning sounds | Should | | E2E-08 | |
 | AC-11.4 No audio files | Should | | | BUILD-02 |
@@ -365,7 +365,7 @@ Every business rule has at least one named unit test: BR-01 UT-INPUT and E2E-03/
 | NFR-15 Contrast | Must | A11Y-CONTRAST |
 | NFR-16 Reduced motion | Should | **E2E-14**, UT-HUD |
 | NFR-17 Sound is never the only cue | Must | **E2E-15** |
-| NFR-18 Page basics and axe | Must | A11Y-01 |
+| NFR-18 Page basics and axe | Must | A11Y-AXE |
 | NFR-19 Privacy | Must | **E2E-16** |
 | NFR-20 Load time | Should | E2E-17 |
 | NFR-21 Determinism | Must | UT-DET, LINT-02 |
@@ -388,11 +388,56 @@ Every business rule has at least one named unit test: BR-01 UT-INPUT and E2E-03/
 | SEC-22 Stored value validated | Should | UT-STORE |
 | SEC-23 HTTPS on Pages | Must | SET-01; smoke test of the live URL after Robin's deploy go-ahead |
 
-### 10.6 Notes for the design
+### 10.6 UX accessibility requirements
 
-- **Event log for end-to-end tests.** ARCHITECTURE.md §4 clears `state.events` at the start of every step. For E2E-08 and E2E-15 the test hook's `events()` must return every event since load (or a bounded recent history, for example the last 1,000), each with its simulation time, not only the current step's. Otherwise a test that polls between frames misses events. This is a detail of `test-hook.js`, not a change to the simulation.
-- **Visual cues per sound (E2E-15).** The test needs `UX_SPEC.md` to name the visual cue for each sound event.
+`UX_SPEC.md` (commit `169b8cc`) §9 numbers its accessibility requirements `A11Y-1` to `A11Y-17`. My accessibility test IDs use words (`A11Y-AXE`, `A11Y-CONTRAST`, `A11Y-FLASH`) so the two never collide.
+
+| UX req | Tests |
+|---|---|
+| A11Y-1 HTML overlays, axe clean | A11Y-AXE on start, pause, game-over, keyboard-needed and error overlays |
+| A11Y-2 `lang` and `<title>` | A11Y-AXE, E2E-01 |
+| A11Y-3 Keyboard only | LINT-03 over the E2E suite |
+| A11Y-4 Focus moves to the primary button and back | E2E-19 |
+| A11Y-5 Visible focus ring | A11Y-AXE; manual check in MAN-EXPLORE |
+| A11Y-6 Buttons at least 44 × 44 px | E2E-19 (bounding boxes) |
+| A11Y-7 Contrast | A11Y-CONTRAST: computed from the §8.1 tokens in a unit test, then a screenshot spot check |
+| A11Y-8 No colour-only cues | Manual greyscale screenshot check in MAN-EXPLORE |
+| A11Y-9 At most three flashes a second | A11Y-FLASH, UT-HUD |
+| A11Y-10 Reduced motion: no shake, pulse or camera turn | E2E-14, extended to the warning-ring pulse and the start-screen camera |
+| A11Y-11 Pause always available | E2E-07 |
+| A11Y-12 Single-key shortcuts only while the game has focus | Code review |
+| A11Y-13 Live region announcements, never per frame | E2E-20 |
+| A11Y-14 Canvas role and label | A11Y-AXE |
+| A11Y-15 Reflow at 320 px and 200% zoom | E2E-21 |
+| A11Y-16 Visual pair for every sound | E2E-15, using the UX §12 table |
+| A11Y-17 Plain-word error messages | Manual check of the error overlay copy |
+
+New scenarios for these:
+
+| ID | Scenario |
+|---|---|
+| E2E-19 | **Overlay focus and target size.** Open each overlay and check focus lands on its primary button; close it and check focus returns to the game container; no focused element is hidden. Every button is at least 44 × 44 CSS px. |
+| E2E-20 | **Live region.** Over a seeded game, the `role="status"` region holds exactly the A11Y-13 strings at the right moments, and its text changes no more often than the game events that cause it. |
+| E2E-21 | **Reflow.** At a 320 px wide viewport and at 200% text zoom, every overlay's text fits with no horizontal scrolling. |
+
+### 10.7 Notes for the design
+
+- **Event log for end-to-end tests.** ARCHITECTURE.md §4 clears `state.events` at the start of every step. For E2E-08, E2E-15 and E2E-20 the test hook's `events()` must return every event since load (or a bounded recent history, for example the last 1,000), each with its simulation time, not only the current step's. Otherwise a test that polls between frames misses events. This is a detail of `test-hook.js`, not a change to the simulation.
+- **Enemy warning event.** UX §12 plays a warning sound and shows a ring when the enemy enters its aim state. The architecture's event list (`shot`, `shell-blocked`, `tank-hit`, `player-hit`, `enemy-spawned`, `level-up`, `game-over`) has no event for that. Audio needs one, and so does E2E-15.
 - **Shake flag (E2E-14).** If reduced motion is honoured in `hud.js` or `scene.js`, the snapshot should carry the camera or shake offset in use, so the test can see it is zero.
+
+### 10.8 Conflicts between REQUIREMENTS.md and UX_SPEC.md
+
+These change the expected result of a test, so I cannot write those tests until each is settled. They go to the Analyst, Designer and Product through the Manager.
+
+| # | Topic | REQUIREMENTS.md | UX_SPEC.md | Tests affected |
+|---|---|---|---|---|
+| X1 | What starts a game | BR-18, AC-01.2: any key except modifiers, Tab and F1–F12 | §4.1: only Enter, or Space on the focused Start button. W/A/S/D do nothing on Start. | E2E-02, UT-FLOW |
+| X2 | What restarts after game over | BR-20, AC-09.6: any accepted key after the lockout | §4.1: Enter or the focused button; Esc goes to the title screen | E2E-06, UT-FLOW |
+| X3 | Delay before game over | AC-09.4: 2.0 s (K-13) | §5.4: 1.5 s | E2E-06, UT-SCORE |
+| X4 | Hit feedback duration | AC-14.1: 0.75 s (K-23) | §5.3: alert frame 400 ms, shake 250 ms, banner for the whole respawn delay | UT-HUD, E2E-06 |
+| X5 | Screens missing from the requirements | §8.1 has Start, Playing, Paused, Respawning, Game over | Adds Loading, Keyboard needed, Error, "Quit to title" from Pause, Esc to title from Game over, and auto-pause when the window is too small | No acceptance criteria to test against |
+| X6 | Enemy fire out of view | NFR-17: every event with a sound has a visual cue | §12: enemy shot is only visible "if in view" | E2E-15 |
 
 ## 11. Deliverables from me
 
@@ -400,7 +445,8 @@ Every business rule has at least one named unit test: BR-01 UT-INPUT and E2E-03/
 |---|---|
 | Now (Design) | This strategy. |
 | Done (`34cab00`) | Traceability from every requirement to its tests (section 10). |
-| When `UX_SPEC.md` lands | Visual cues per sound for E2E-15, accessibility checks keyed to the Designer's requirements. |
+| Done (`169b8cc`) | UX accessibility requirements keyed to tests (section 10.6). |
+| When X1–X6 are settled | Expected results for the affected tests (section 10.8). |
 | Build | The Playwright suite and the performance and "Battlezone" checks, alongside the Developer's unit tests and the Engineer's CI. |
 | Verify | Test execution, defects as Buzz issues, retests. |
 | End of Verify | `docs/TEST_REPORT.md`: coverage, results, open defects with severity, and a go/no-go recommendation. |
