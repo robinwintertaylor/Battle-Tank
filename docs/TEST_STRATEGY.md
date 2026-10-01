@@ -11,7 +11,7 @@ created: 2026-10-01
 
 This document says how we will prove Wireframe Tanks works before Robin decides to deploy it: what we test, at which level, with which tools, where the tests run, and when Verify can start and finish. It is sized for a small static game with no backend.
 
-Section 10 traces every acceptance criterion, business rule, NFR and security requirement in `REQUIREMENTS.md` (commit `34cab00`) and every accessibility requirement in `UX_SPEC.md` (commit `169b8cc`) to its tests. Section 10.8 lists six places where the two documents disagree; the affected tests wait until those are settled.
+Section 10 traces every acceptance criterion, business rule, NFR and security requirement in `REQUIREMENTS.md` (revision 2, commit `302d4a5`) and every accessibility requirement in `UX_SPEC.md` (commit `169b8cc`) to its tests. The six conflicts between them (section 10.8) are resolved, and section 10 follows `REQUIREMENTS.md` revision 2 (`302d4a5`).
 
 ## 1. What we are testing
 
@@ -88,7 +88,7 @@ If the Architect chooses differently on any of these, I will adjust this strateg
 11. No uncaught errors or console errors during any of the above, in all three browsers.
 12. **Test hook is inert for players** (ADR 0008): with no `window.__WT_TEST__` set, the page exposes no `snapshot` or `events` function. With it set, mutating the object returned by `snapshot()` throws or has no effect on the game.
 
-**Spike early in Build (ADR 0008 depends on it):** confirm in Chromium, Firefox and WebKit that (a) `page.addInitScript` still runs with the shipped CSP `<meta>` tag in place, without `bypassCSP`, and (b) `page.clock` drives `requestAnimationFrame`, so time-dependent scenarios can fast-forward deterministically. If (a) fails, end-to-end tests use `bypassCSP` and the CSP check (SEC-17) runs in its own context without it. If (b) fails, long scenarios such as losing all lives run in real time with longer timeouts.
+**Spike early in Build (ADR 0008 and BR-24 depend on it):** confirm in Chromium, Firefox and WebKit that (c) headless browsers report `(any-pointer: fine)` as true, otherwise every end-to-end test lands on the Keyboard needed overlay and has to click through it, and (d) E2E-23 can make it false (touch emulation in Chromium; in the other engines, an init script that answers that one `matchMedia` query). Also that (a) `page.addInitScript` still runs with the shipped CSP `<meta>` tag in place, without `bypassCSP`, and (b) `page.clock` drives `requestAnimationFrame`, so time-dependent scenarios can fast-forward deterministically. If (a) fails, end-to-end tests use `bypassCSP` and the CSP check (SEC-17) runs in its own context without it. If (b) fails, long scenarios such as losing all lives run in real time with longer timeouts.
 
 ### 3.3 Performance tests
 
@@ -200,11 +200,11 @@ If a criterion cannot be met, I do not sign off. I report which one and why, and
 | 3 | End-to-end tests that aim and shoot with key presses are flaky | Fixed seed and test hook (T3, T5), so the scenario is the same every run; precise hit logic is tested at unit level instead. |
 | 4 | No Mac available, so Safari is untested | WebKit in CI as a proxy, and the report says plainly that Safari was not tested. |
 | 5 | Screens drawn on the canvas cannot be checked for accessibility automatically | T6, or manual checks recorded in the report. |
-| 6 | Requirements numbers change after this document | Section 10 is keyed to `REQUIREMENTS.md` at `34cab00`. I recheck it whenever that file changes and again before Verify. |
+| 6 | Requirements numbers change after this document | Section 10 is keyed to `REQUIREMENTS.md` revision 2 at `302d4a5`. I recheck it whenever that file changes and again before Verify. |
 
 ## 10. Traceability
 
-Keyed to `REQUIREMENTS.md` at commit `34cab00`. Every acceptance criterion, business rule, NFR and security requirement maps to at least one test. Product-brief IDs are kept in the US rows so each test still traces back to the brief. The Analyst keeps `REQUIREMENTS.md` §12 at the summary level; this section is the detailed table, and the two are kept in step.
+Keyed to `REQUIREMENTS.md` revision 2 at commit `302d4a5`. Every acceptance criterion, business rule, NFR and security requirement maps to at least one test. Product-brief IDs are kept in the US rows so each test still traces back to the brief. The Analyst keeps `REQUIREMENTS.md` §12 at the summary level; this section is the detailed table, and the two are kept in step.
 
 ### 10.1 Test catalogue
 
@@ -242,6 +242,11 @@ Test ID prefixes: `UT` unit (Node, `node:test`), `E2E` end to end (Playwright), 
 | E2E-16 | **Privacy and storage.** After a full game: no cookies in the browser context and `document.cookie` is empty; `localStorage` holds no key except `wireframe-tanks:best-score`; `sessionStorage` is empty; no IndexedDB database, Cache Storage entry or service worker exists. | NFR-19, SEC-21 |
 | E2E-17 | **Throttled load.** Chromium only, because network throttling needs its DevTools protocol: 10 Mbit/s, 40 ms latency, empty cache. The Start screen must accept a key within 2 s of navigation. | NFR-20 |
 | E2E-18 | **Resize.** Resize the window between two aspect ratios mid-game. The canvas fills the area, the horizon stays level, and the projection is not stretched. | AC-02.5 |
+| E2E-22 | **Loading.** Delay one game module with Playwright's request routing. While it is held, the Start button is disabled and reads "Loading…", and Enter and Space start nothing. Release it, and the button is enabled and focused. | AC-01.5 |
+| E2E-23 | **Keyboard needed.** Emulate a touch-only device, then separately a 600 × 380 window at load. Each shows the Keyboard needed overlay with "Play anyway" focused, and activating it shows Start. With a fine pointer and a large window it never appears. | US-19, BR-24 |
+| E2E-24 | **Error screen.** An init script makes a canvas drawing call throw once play has started, which causes a real uncaught error in the loop. The loop stops (the snapshot's tick stops advancing), the Error overlay shows the §11 copy with "Reload" focused, no stack trace or file path is on screen, the error is in the console, and Reload reloads the page. This scenario is exempt from the no-console-errors check in E2E-11. | US-20, BR-27 |
+| E2E-25 | **Window too small.** While playing, resize to 639 × 400 and to 640 × 399: each pauses with the "make the window larger" message and Resume disabled. Resize to 640 × 400: Resume is enabled and the game stays paused until resumed. | AC-10.9, AC-10.10, BR-25 |
+| E2E-26 | **Quit to title.** With a stored best score of 100, play a seeded game to 200 points, pause, and activate Quit to title. The Start screen shows and the stored best is still 100. | AC-10.8, BR-26 |
 
 **Build, lint and settings checks.**
 
@@ -263,8 +268,9 @@ Test ID prefixes: `UT` unit (Node, `node:test`), `E2E` end to end (Playwright), 
 | AC | Pri | Unit | End to end | Other |
 |---|---|---|---|---|
 | AC-01.1 Start screen content | Must | | E2E-01 | A11Y-AXE |
-| AC-01.2 Accepted key starts a game | Must | UT-FLOW | E2E-02 | |
-| AC-01.3 Modifier, Tab and F-keys do not start | Must | UT-FLOW | E2E-02 | |
+| AC-01.2 Enter, or Space on the focused Start button, starts a game | Must | UT-FLOW | E2E-02 | |
+| AC-01.3 No other key starts; Tab moves focus | Must | UT-FLOW | E2E-02 | |
+| AC-01.5 Loading: button disabled, nothing starts | Must | | E2E-22 | |
 | AC-01.4 No sound before first key | Must | | E2E-08 | |
 | AC-02.1 First-person view with horizon | Must | UT-PROJ, UT-SCENE | E2E-02 | |
 | AC-02.2 See-through lines | Must | UT-SCENE | | MAN-EXPLORE |
@@ -306,19 +312,26 @@ Test ID prefixes: `UT` unit (Node, `node:test`), `E2E` end to end (Playwright), 
 | AC-08.2 Behind is distinguishable | Must | UT-HUD | | A11Y-CONTRAST |
 | AC-08.3 No enemy shown during respawn | Must | UT-HUD | | |
 | AC-08.4 Updates in the same frame | Must | UT-HUD | | |
+| AC-08.5 Chevron alert for 0.3 s when an out-of-view enemy fires | Must | UT-HUD | E2E-15 | A11Y-FLASH |
 | AC-09.1 Score 0, lives 3 | Must | UT-SCORE | E2E-02 | |
 | AC-09.2 +100 per kill | Must | UT-SCORE | E2E-05 | |
 | AC-09.3 Death, respawn after 2.0 s | Must | UT-SCORE, UT-SPAWN | E2E-06 | |
-| AC-09.4 Game over after last life | Must | UT-SCORE, UT-FLOW | E2E-06 | |
-| AC-09.5 1.0 s restart lockout | Must | UT-FLOW | E2E-06 | |
-| AC-09.6 Restart without reload | Must | UT-SCORE | E2E-06 | |
+| AC-09.4 Destroyed for 1.5 s, then Game over | Must | UT-SCORE, UT-FLOW | E2E-06 | |
+| AC-09.5 1.0 s lockout, buttons disabled | Must | UT-FLOW | E2E-06 | |
+| AC-09.6 Enter or Play again restarts without reload | Must | UT-SCORE, UT-FLOW | E2E-06 | |
 | AC-09.7 Same-step destruction | Must | UT-HIT, UT-SCORE | | |
+| AC-09.8 Esc or Title screen goes to Start | Must | UT-FLOW | E2E-06 | |
+| AC-09.9 Play again has focus after the lockout | Must | | E2E-06, E2E-19 | |
 | AC-10.1 Pause freezes everything | Should | UT-FLOW | E2E-07 | |
 | AC-10.2 Resume from the same state | Should | UT-FLOW | E2E-07 | |
 | AC-10.3 Auto-pause on hide or blur | Should | | E2E-07 | |
 | AC-10.4 No auto-resume | Should | | E2E-07 | |
 | AC-10.5 Paused screen says how to resume | Should | | E2E-07 | A11Y-AXE |
 | AC-10.6 Game keys do nothing while paused | Should | UT-FLOW | E2E-07 | |
+| AC-10.7 Focus on the pause dialog; held Space does not resume | Should | | E2E-07, E2E-19 | |
+| AC-10.8 Quit to title; best score not updated | Should | UT-FLOW, UT-STORE | E2E-26 | |
+| AC-10.9 Window under 640 × 400 pauses, Resume disabled | Should | UT-FLOW | E2E-25 | |
+| AC-10.10 Resume re-enabled at 640 × 400, still paused | Should | UT-FLOW | E2E-25 | |
 | AC-11.1 to AC-11.3 Shot, explosion, warning sounds | Should | | E2E-08 | |
 | AC-11.4 No audio files | Should | | | BUILD-02 |
 | AC-12.1, AC-12.2 Mute toggles on every screen | Should | | E2E-08 | |
@@ -326,9 +339,11 @@ Test ID prefixes: `UT` unit (Node, `node:test`), `E2E` end to end (Playwright), 
 | AC-13.1 to AC-13.3 Level thresholds and cap | Should | UT-DIFF | | |
 | AC-13.4 Level fixed at spawn | Should | UT-DIFF | | |
 | AC-13.5 Table never gets easier | Should | UT-CONFIG | | |
-| AC-14.1 Hit effect, 0.75 s | Should | UT-HUD | E2E-06 | |
+| AC-14.1 Frame 0.4 s, shake 0.25 s at 6 px, banner, all in the same frame | Should | UT-HUD | E2E-06 | |
 | AC-14.2 At most three flashes a second | Should | UT-HUD | | A11Y-FLASH |
 | AC-14.3 Reduced motion | Should | UT-HUD | E2E-14 | |
+| AC-14.4 HIT banner for the whole respawn delay | Should | UT-HUD | E2E-06 | |
+| AC-14.5 DESTROYED banner until Game over | Should | UT-HUD | E2E-06 | |
 | AC-15.1 Best score stored under the key | Could | UT-STORE | E2E-16 | |
 | AC-15.2 Best score on game-over screen | Could | | E2E-06 | |
 | AC-15.3 Invalid stored value treated as 0 | Could | UT-STORE | | |
@@ -337,12 +352,19 @@ Test ID prefixes: `UT` unit (Node, `node:test`), `E2E` end to end (Playwright), 
 | AC-17.1, AC-17.2 Engine sound | Could | | E2E-08 | |
 | AC-18.1 Explosion fragments within 2.0 s | Could | UT-SCENE | | |
 | AC-18.2 Explosion flash limit | Could | UT-HUD | | A11Y-FLASH |
+| AC-19.1 No fine pointer: Keyboard needed, Play anyway focused | Must | | E2E-23 | A11Y-AXE |
+| AC-19.2 Window under 640 × 400 at load: Keyboard needed | Must | | E2E-23 | |
+| AC-19.3 Play anyway goes to Start | Must | | E2E-23 | |
+| AC-19.4 Fine pointer and large window: not shown | Must | | E2E-01, E2E-23 | |
+| AC-20.1 Uncaught error: loop stops, Error screen, Reload focused | Must | | E2E-24 | A11Y-AXE |
+| AC-20.2 No technical detail on screen; logged to console | Must | | E2E-24 | |
+| AC-20.3 Reload reloads the page | Must | | E2E-24 | |
 
 How E2E-08 observes sound: the end-to-end test cannot listen to the speakers. An init script wraps `AudioContext` so the test can count started sources and read the master gain, and the snapshot's `muted` flag and the event log say what should have played. Whether each sound is pleasant and original is a MAN-IP judgement.
 
 ### 10.3 Business rules
 
-Every business rule has at least one named unit test: BR-01 UT-INPUT and E2E-03/04; BR-02, BR-03 UT-MOVE; BR-04 UT-COLL; BR-05 UT-COLL, UT-SHELL; BR-06 UT-CONFIG; BR-07, BR-08 UT-SHELL; BR-09, BR-10, BR-21 UT-HIT; BR-11, BR-12, BR-13 UT-SCORE; BR-14 UT-SPAWN; BR-15, BR-16 UT-AI; BR-17 UT-DIFF; BR-18, BR-19, BR-20, BR-22 UT-FLOW; BR-23 E2E-08. NFR-24 requires a test named after each BR.
+Every business rule has at least one named unit test: BR-01 UT-INPUT and E2E-03/04; BR-02, BR-03 UT-MOVE; BR-04 UT-COLL; BR-05 UT-COLL, UT-SHELL; BR-06 UT-CONFIG; BR-07, BR-08 UT-SHELL; BR-09, BR-10, BR-21 UT-HIT; BR-11, BR-12, BR-13 UT-SCORE; BR-14 UT-SPAWN; BR-15, BR-16 UT-AI; BR-17 UT-DIFF; BR-18, BR-19, BR-20, BR-22, BR-25, BR-26 UT-FLOW; BR-23 E2E-08; BR-24 E2E-23; BR-25 E2E-25; BR-26 E2E-26 and UT-STORE; BR-27 E2E-24. BR-24 and BR-27 live in page code rather than `core/`, so their tests are end to end. NFR-24 requires a test named after each BR.
 
 ### 10.4 Non-functional requirements
 
@@ -420,25 +442,24 @@ New scenarios for these:
 | E2E-20 | **Live region.** Over a seeded game, the `role="status"` region holds exactly the A11Y-13 strings at the right moments, and its text changes no more often than the game events that cause it. |
 | E2E-21 | **Reflow.** At a 320 px wide viewport and at 200% text zoom, every overlay's text fits with no horizontal scrolling. |
 
-### 10.7 Notes for the design
+### 10.7 Notes for the design (all resolved)
 
-- **Event log for end-to-end tests.** ARCHITECTURE.md §4 clears `state.events` at the start of every step. For E2E-08, E2E-15 and E2E-20 the test hook's `events()` must return every event since load (or a bounded recent history, for example the last 1,000), each with its simulation time, not only the current step's. Otherwise a test that polls between frames misses events. This is a detail of `test-hook.js`, not a change to the simulation.
-- **Enemy warning event.** UX §12 plays a warning sound and shows a ring when the enemy enters its aim state. The architecture's event list (`shot`, `shell-blocked`, `tank-hit`, `player-hit`, `enemy-spawned`, `level-up`, `game-over`) has no event for that. Audio needs one, and so does E2E-15.
-- **Shake flag (E2E-14).** If reduced motion is honoured in `hud.js` or `scene.js`, the snapshot should carry the camera or shake offset in use, so the test can see it is zero.
+- **Event log for end-to-end tests:** resolved in ADR 0008 (`9681acc`). The test hook keeps the last 1,000 events since load, each stamped with its simulation tick.
+- **Enemy warning event:** resolved (`9681acc`). The simulation emits `enemy-aiming` once when an enemy enters its aim state.
+- **Shake offset for E2E-14:** resolved (`9681acc`). The snapshot carries a `view` record with the shake offset used in the last frame.
 
-### 10.8 Conflicts between REQUIREMENTS.md and UX_SPEC.md
+### 10.8 Conflicts between REQUIREMENTS.md and UX_SPEC.md (all resolved)
 
-These change the expected result of a test, so I cannot write those tests until each is settled. They go to the Analyst, Designer and Product through the Manager.
+The Manager ruled on all six (Cortex D-87). The Analyst applied X1–X5 and the X6 cue in `REQUIREMENTS.md` revision 2 (`302d4a5`), and the Designer applied them in `UX_SPEC.md` (`9611e95`). The expected results in 10.2 follow the rulings.
 
-| # | Topic | REQUIREMENTS.md | UX_SPEC.md | Tests affected |
-|---|---|---|---|---|
-| X1 | What starts a game | BR-18, AC-01.2: any key except modifiers, Tab and F1–F12 | §4.1: only Enter, or Space on the focused Start button. W/A/S/D do nothing on Start. | E2E-02, UT-FLOW |
-| X2 | What restarts after game over | BR-20, AC-09.6: any accepted key after the lockout | §4.1: Enter or the focused button; Esc goes to the title screen | E2E-06, UT-FLOW |
-| X3 | Delay before game over | AC-09.4: 2.0 s (K-13) | §5.4: 1.5 s | E2E-06, UT-SCORE |
-| X4 | Hit feedback duration | AC-14.1: 0.75 s (K-23) | §5.3: alert frame 400 ms, shake 250 ms, banner for the whole respawn delay | UT-HUD, E2E-06 |
-| X5 | Screens missing from the requirements | §8.1 has Start, Playing, Paused, Respawning, Game over | Adds Loading, Keyboard needed, Error, "Quit to title" from Pause, Esc to title from Game over, and auto-pause when the window is too small | No acceptance criteria to test against |
-| X6 | Enemy fire out of view | NFR-17: every event with a sound has a visual cue | §12: enemy shot is only visible "if in view" | E2E-15 |
-
+| # | Topic | Ruling | Now tested by |
+|---|---|---|---|
+| X1 | What starts a game | Enter, or Space on the focused Start button (BR-18) | AC-01.1 to AC-01.3, E2E-02, UT-FLOW |
+| X2 | What restarts after game over | Enter or Play again after the lockout; Esc or Title screen goes to Start (BR-20) | AC-09.5, AC-09.6, AC-09.8, AC-09.9, E2E-06 |
+| X3 | Delay before game over | 1.5 s Destroyed state (K-27) | AC-09.4, AC-14.5, E2E-06 |
+| X4 | Hit feedback | 0.4 s frame (K-23), 0.25 s 6 px shake (K-28), banner for the respawn delay | AC-14.1, AC-14.4, UT-HUD, E2E-06 |
+| X5 | Extra screens | In scope: BR-24 to BR-27, US-19, US-20, AC-01.5, AC-10.8 to AC-10.10 | E2E-22 to E2E-26 |
+| X6 | Enemy fire out of view | Edge chevron alert for 0.3 s (AC-08.5) | UT-HUD, E2E-15 |
 ## 11. Deliverables from me
 
 | When | What |
@@ -446,7 +467,7 @@ These change the expected result of a test, so I cannot write those tests until 
 | Now (Design) | This strategy. |
 | Done (`34cab00`) | Traceability from every requirement to its tests (section 10). |
 | Done (`169b8cc`) | UX accessibility requirements keyed to tests (section 10.6). |
-| When X1–X6 are settled | Expected results for the affected tests (section 10.8). |
+| Done (`302d4a5`) | Tests for requirements revision 2: US-19, US-20, AC-01.5, AC-08.5, AC-09.8, AC-09.9, AC-10.7 to AC-10.10, AC-14.4, AC-14.5 (section 10.2). |
 | Build | The Playwright suite and the performance and "Battlezone" checks, alongside the Developer's unit tests and the Engineer's CI. |
 | Verify | Test execution, defects as Buzz issues, retests. |
 | End of Verify | `docs/TEST_REPORT.md`: coverage, results, open defects with severity, and a go/no-go recommendation. |
