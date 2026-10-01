@@ -175,7 +175,9 @@ One plain, serialisable object. No classes, no closures, no references to the DO
 - **Ground plane:** X and Z, with Y up. Heading 0 faces +Z; a positive turn is clockwise seen from above, towards +X.
 - **Tanks are a collection.** The player is the tank whose `id` is `playerId`. There is no `state.enemy` field anywhere. This is Product's Phase 2 constraint, and ADR 0004.
 - **`prevPos` and `prevHeading`** are copied at the start of each step, so the renderer can interpolate between steps (section 5.2).
-- **`events`** is cleared at the start of each step and filled during it: `shot`, `shell-blocked`, `tank-hit`, `player-hit`, `enemy-spawned`, `level-up`, `game-over`. Audio, hit feedback and the test hook read them. The simulation never calls out to anything.
+- **`events`** is cleared at the start of each step and filled during it: `shot` (either side; carries `tankId`), `shell-blocked`, `tank-hit`, `player-hit`, `enemy-spawned`, `enemy-aiming`, `level-up`, `game-over`. Audio, hit feedback and the test hook read them. The simulation never calls out to anything.
+- **`enemy-aiming`** is emitted by `sim.js`, not by the AI: after each enemy's `think`, the step compares the AI's state before and after, and emits the event once when it changes into `aim`. That drives the UX warning sound ("at most once per aim", `UX_SPEC.md` §12). The locator's warning ring needs no event: `hud.js` reads the enemy's current AI state from the game state every frame. Any future AI kind gets the warning for free as long as it names its aiming state `aim`.
+- **Each event carries `tick`**, so its simulation time is `tick / 60` s. The history of events since load is kept by the test hook, not by the simulation (section 4.5, ADR 0008).
 
 ### 4.3 One simulation step
 
@@ -214,7 +216,7 @@ Segments are written into preallocated `Float32Array` buffers that are reused ev
 | `audio.js` | Creates the `AudioContext` on the first key press (the browser's autoplay rule, research §6). Plays sounds for simulation events. Mute toggles a master gain (S2). ADR 0006. |
 | `storage.js` | Reads and writes the best score under `wireframe-tanks:best-score` (SEC-21), inside `try`/`catch`, and validates with `core/best-score.js` (SEC-22). If storage fails the game still runs. Only built if C1 is. |
 | `screens.js` | Shows and hides the HTML overlays for the start, pause and game-over screens, and writes their text with `textContent` only (SEC-19). ADR 0005. |
-| `test-hook.js` | Exposes a read-only snapshot of the state for end-to-end tests, only when the test runner has asked for it (T5). ADR 0008. |
+| `test-hook.js` | Exposes a read-only snapshot of the state for end-to-end tests, only when the test runner has asked for it (T5). After every step it copies that step's events into its own ring buffer of the last 1,000 events since load, so a test that polls between frames misses nothing. The snapshot also carries a `view` record with the camera shake offset and hit-flash state actually used in the last frame, so a reduced-motion test can see the shake is zero. ADR 0008. |
 | `main.js` | Creates the state, wires input, loop, renderer, audio, screens, storage and the test hook. Installs the error handler (section 6.5). Pauses on `visibilitychange` (hidden) and window `blur` (S4). |
 
 ## 5. Key mechanisms
@@ -389,15 +391,15 @@ There is no network API, so there is no OpenAPI document. The interfaces that ma
 | Interface | Shape | Used by |
 |---|---|---|
 | Simulation | `step(state: GameState, input: InputSnapshot): void` | `loop.js`, unit tests |
-| Input snapshot | `{ throttle: -1\|0\|1, turn: -1\|0\|1, fireHeld: boolean, firePressed: boolean, commands: Command[] }` with commands `start`, `pause`, `mute`, `restart`, `debug` | `input.js` produces, `sim.js` and `game.js` consume |
+| Input snapshot | `{ throttle: -1\|0\|1, turn: -1\|0\|1, firePressed: boolean, commands: Command[] }` with commands `start`, `pause`, `resume`, `mute`, `restart`, `quit-to-title`, `debug`. `firePressed` is set by a key-down that is not an auto-repeat (BR-01). Commands come from keys during play and from the HTML screens' buttons and Enter/Esc handling (BR-18, BR-20 as amended for X1, X2). | `input.js` and `screens.js` produce, `sim.js` and `game.js` consume |
 | AI kind | `think(memory, tank, view, rng) → { throttle, turn, fire }`, where `view` is a read-only summary of the player, obstacles and difficulty | `sim.js`, Phase 2 kinds |
 | Scene | `buildScene(state, alpha, out: Float32Array) → segmentCount` (6 floats per 3D segment) | renderer, unit tests |
 | Renderer | `draw(ctx, segments2d, count, hud, palette)` | `main.js` |
-| Events | `{ type: 'shot' \| 'shell-blocked' \| 'tank-hit' \| 'player-hit' \| 'enemy-spawned' \| 'level-up' \| 'game-over', tick, ...details }` | audio, hit feedback, test hook |
-| Test hook | `window.__WT_TEST__ = { seed }` set before load; the page adds `snapshot(): FrozenGameState` and `events(): GameEvent[]` | Playwright only |
+| Events | `{ type: 'shot' \| 'shell-blocked' \| 'tank-hit' \| 'player-hit' \| 'enemy-spawned' \| 'enemy-aiming' \| 'level-up' \| 'game-over', tick, ...details }` | audio, hit feedback, test hook |
+| Test hook | `window.__WT_TEST__ = { seed }` set before load; the page adds `snapshot(): FrozenGameState & { view }` and `events(): GameEvent[]`, the last 1,000 events since load in order | Playwright only |
 | Storage | key `wireframe-tanks:best-score`, value a decimal integer string | `storage.js` |
 
-Whether fire triggers on press only, or repeats while Space is held, is a business rule for the Analyst. The snapshot carries both so either rule fits.
+Fire acts once per key press, with auto-repeat ignored (BR-01, BR-08, confirmed by Product). The extra screens in `UX_SPEC.md` (Loading, Keyboard needed, Error, Quit to title, auto-pause when the window is too small) are page-level states in `screens.js` and `main.js`. They map onto the four game screens without adding new ones: Quit to title is the `start` screen, and the small-window auto-pause is the `paused` screen.
 
 ## 10. Deployment
 

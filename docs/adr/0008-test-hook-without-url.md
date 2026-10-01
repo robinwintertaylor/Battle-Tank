@@ -16,6 +16,12 @@ The Tester needs a read-only view of the game state, and a way to fix the seed, 
 
 Option 3. `snapshot()` returns a deep-frozen copy of the state, so a test cannot change the game through it. The only input is the seed, which only changes which random game is played.
 
+**Amended 2026-10-01, before the design gate.** These add detail and do not change the decision:
+
+- **Event history.** `events()` returns the last 1,000 events since load, in order, each with its `tick`. The hook copies each step's events into its own ring buffer. The simulation still clears `state.events` every step, so the game itself keeps no growing history. Requested by the Tester (test strategy §10.7) so tests that poll between frames miss nothing.
+- **View record.** The snapshot carries `view`: the camera shake offset and hit-flash state actually used in the last frame. A reduced-motion test can then check that the shake is zero (E2E-14).
+- **Security's conditions.** The global is read once, at start-up, and is accepted only if it is a plain object (`Object.getPrototypeOf(x) === Object.prototype`). That way a DOM element with the id `__WT_TEST__` cannot switch the hook on, and nothing set later changes behaviour. The seed is used only if `Number.isSafeInteger(seed)` and it is within the 32-bit unsigned range; otherwise it is ignored and a random seed is used. The seed is never written into text, the DOM or a storage key.
+
 ## Consequences
 
 - SEC-20 holds: there is no URL parsing anywhere.
