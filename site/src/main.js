@@ -131,17 +131,31 @@ function render(alpha) {
   hook?.publish(state, view, { muted, page });
 }
 
-const loop = startLoop({ now: () => performance.now(), requestFrame: (cb) => requestAnimationFrame(cb), step: simulate, render });
-
-// Any uncaught error stops the game and shows the Error overlay. The detail
-// goes to the console, never the screen (BR-27).
-addEventListener('error', () => {
+// Any error stops the game and shows the Error overlay. The detail goes to
+// the console, never the screen (BR-27). Frame errors are caught here, so
+// they stop the loop the same way in every browser and under a test clock;
+// the window listeners catch anything thrown elsewhere.
+/** @param {unknown} err */
+function fail(err) {
+  if (page === 'error') return;
   loop.stop();
   page = 'error';
+  console.error(err);
   screens.show(overlayFor(state, page, { best, newBest }));
+}
+/** @param {() => void} fn */
+const guarded = (fn) => () => {
+  try {
+    fn();
+  } catch (err) {
+    fail(err);
+  }
+};
+const loop = startLoop({
+  now: () => performance.now(),
+  requestFrame: (cb) => requestAnimationFrame(cb),
+  step: guarded(simulate),
+  render: (alpha) => guarded(() => render(alpha))(),
 });
-addEventListener('unhandledrejection', () => {
-  loop.stop();
-  page = 'error';
-  screens.show(overlayFor(state, page, { best, newBest }));
-});
+addEventListener('error', (e) => fail(e.error ?? e.message));
+addEventListener('unhandledrejection', (e) => fail(e.reason));
