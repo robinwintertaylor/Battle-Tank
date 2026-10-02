@@ -91,6 +91,39 @@ test('BR-27 if a step throws, the loop asks for no further frame', () => {
   assert.equal(queue.length, 0);
 });
 
+test('BR-27 a step that throws and stops the loop runs no more steps, no render and no further frame', () => {
+  /** @type {((t: number) => void)[]} */
+  const queue = [];
+  let steps = 0;
+  let renders = 0;
+  // As in main.js: the step is guarded, and the guard stops the loop.
+  const loop = startLoop({
+    now: () => 0,
+    requestFrame: (cb) => queue.push(cb),
+    step: () => {
+      try {
+        steps++;
+        throw new Error('boom');
+      } catch {
+        loop.stop();
+      }
+    },
+    render: () => renders++,
+  });
+  /** @type {(t: number) => void} */ (queue.shift())(4 * CONFIG.stepMs + 1); // four steps owed
+  assert.equal(steps, 1, 'the rest of the frame is skipped');
+  assert.equal(renders, 0, 'the frame is not rendered');
+  assert.equal(queue.length, 0, 'and no further frame is asked for');
+});
+
+test('BR-27 a render that stops the loop asks for no further frame', () => {
+  /** @type {((t: number) => void)[]} */
+  const queue = [];
+  const loop = startLoop({ now: () => 0, requestFrame: (cb) => queue.push(cb), step: () => {}, render: () => loop.stop() });
+  /** @type {(t: number) => void} */ (queue.shift())(17);
+  assert.equal(queue.length, 0);
+});
+
 test('UX 5 the overlay follows the screen; Respawning and Destroyed have none', () => {
   const state = createWorld(1, CONFIG);
   const scores = { best: 0, newBest: false };

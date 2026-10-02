@@ -32,7 +32,8 @@ export function advance(acc, elapsedMs) {
  * `step` runs once per simulation step, so the caller hands each step's
  * events on before the next step clears them; `render` runs once per frame.
  * If either throws, no further frame is requested, so the loop stops and the
- * error reaches the page's error handler (BR-27).
+ * error reaches the page's error handler (BR-27). If either calls `stop()`,
+ * the frame ends there: no further step, no render and no next frame.
  * @param {{ now: () => number, requestFrame: (cb: (t: number) => void) => unknown, step: () => void, render: (alpha: number) => void }} deps
  */
 export function startLoop({ now, requestFrame, step, render }) {
@@ -45,9 +46,10 @@ export function startLoop({ now, requestFrame, step, render }) {
     const r = advance(acc, t - last);
     last = t;
     acc = r.acc;
-    for (let i = 0; i < r.steps; i++) step();
+    for (let i = 0; i < r.steps && running; i++) step();
+    if (!running) return;
     render(r.alpha);
-    requestFrame(frame);
+    if (running) requestFrame(frame);
   };
   requestFrame(frame);
   return {
