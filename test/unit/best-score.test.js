@@ -27,3 +27,9 @@ test('AC-15.1 BR-26 the best score after a finished game is the higher of the st
   assert.equal(bestAfterGame(500, 800), 800);
   assert.equal(bestAfterGame(0, 0), 0);
 });
+
+test('SEC-22 the best score after a game never goes above 10,000,000, so it always reads back', () => {
+  assert.equal(bestAfterGame(null, MAX_BEST_SCORE + 1), MAX_BEST_SCORE);
+  assert.equal(bestAfterGame(500, 2 ** 40), MAX_BEST_SCORE);
+  assert.equal(parseBestScore(String(bestAfterGame(null, 2 ** 40))), MAX_BEST_SCORE);
+});

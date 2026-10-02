@@ -18,9 +18,10 @@ export function parseBestScore(raw) {
 }
 
 /**
- * The best score once a game reaches Game over (BR-26).
+ * The best score once a game reaches Game over (BR-26), capped at
+ * MAX_BEST_SCORE so that whatever is written always reads back (SEC-22).
  * @param {number | null} stored @param {number} score
  */
 export function bestAfterGame(stored, score) {
-  return Math.max(stored ?? 0, score);
+  return Math.min(Math.max(stored ?? 0, score), MAX_BEST_SCORE);
 }
