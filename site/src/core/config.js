@@ -82,6 +82,21 @@ export const CONFIG = deepFreeze({
     { level: 5, scoreFrom: 2000, turnRateDeg: 90, aimToleranceDeg: 2, reloadSeconds: 2.0 },
   ]),
 
+  /** Hunter AI tuning (REQUIREMENTS.md 8.3 leaves these to the Developer). */
+  hunter: {
+    fireRange: 110, // u: Approach becomes Aim within this, with a clear line of sight
+    aimHysteresis: 1.15, // Aim drops back to Approach beyond fireRange times this
+    evadeSeconds: 1.0, // time spent in Evade
+    evadeCooldownSeconds: 3.0, // no new Evade for this long after one starts
+    playerAimDeg: 4, // the player counts as aiming at the enemy within this
+    lookAhead: 16, // u: obstacle probes reach this far along a candidate heading
+    probeStep: 4, // u between probe points
+    probeMargin: 0.5, // u of extra clearance the probes ask for
+    stuckSeconds: 1.0, // progress is checked this often
+    stuckDistance: 2, // u: less movement than this in one check counts as stuck
+    recoverSeconds: 0.6, // time spent reversing when stuck
+  },
+
   /** Obstacle footprints on the ground (UX_SPEC.md 7.3). A wall's length runs along its model x axis. */
   footprints: /** @type {Record<ObstacleModel, Footprint>} */ ({
     pillar: { type: 'circle', radius: 2.5 },

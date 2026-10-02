@@ -129,7 +129,7 @@ test('BR-04 the player cannot drive into another tank', () => {
   state.tanks.push(enemy);
   run(state, input({ throttle: 1 }), 60 * 3);
   close(player(state).pos.z, 20 - 2 * CONFIG.tankRadius, 1e-3);
-  assert.deepEqual(enemy.pos, { x: 0, z: 20 }, 'the skeleton does not move enemies yet (D3)');
+  assert.deepEqual(enemy.pos, { x: 0, z: 20 }, 'a tank with no AI and no input stands still');
   assert.deepEqual(enemy.prevPos, enemy.pos);
 });
 

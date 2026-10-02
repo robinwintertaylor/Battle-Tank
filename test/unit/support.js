@@ -31,7 +31,8 @@ export const enemies = (state) => state.tanks.filter((t) => t.side === 'enemy');
 /**
  * A game in the Playing screen with its first enemy moved to `at` (default:
  * 100 u along +x, a clear line from the player), out of
- * its grace period and facing the player.
+ * its grace period and facing the player. The enemy is a dummy with no AI
+ * (D3), so it stands still and holds fire unless a test fires it.
  * @param {number} [seed] @param {Vec2} [at]
  */
 export function playing(seed = 1, at = { x: 100, z: 0 }) {
@@ -42,6 +43,7 @@ export function playing(seed = 1, at = { x: 100, z: 0 }) {
   enemy.prevPos = { ...at };
   enemy.heading = Math.atan2(-at.x, -at.z);
   enemy.graceTicks = 0;
+  enemy.control = { type: 'player' };
   return { state, enemy };
 }
 

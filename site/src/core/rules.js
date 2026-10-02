@@ -3,6 +3,7 @@
 // Screen timers are deadlines in ticks, so a paused game, whose tick does not
 // move, holds every one of them (BR-22).
 
+import { AI } from './ai/registry.js';
 import { isClear } from './collision.js';
 import { CONFIG } from './config.js';
 import { degToRad, distance } from './math.js';
@@ -175,7 +176,7 @@ function spawnEnemy(state, target, config) {
     alive: true,
     reload: 0,
     graceTicks: ticksFor(config.enemyGraceSeconds, config),
-    control: { type: 'ai', memory: {} },
+    control: { type: 'ai', memory: AI.hunter.createMemory() },
     tuning: { level: row.level, turnRateDeg: row.turnRateDeg, aimToleranceDeg: row.aimToleranceDeg, reloadTicks: ticksFor(row.reloadSeconds, config) },
   };
   state.tanks.push(enemy);

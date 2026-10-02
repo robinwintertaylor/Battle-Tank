@@ -110,7 +110,7 @@ site/                      <- the only folder that is published (ADR 0007)
     main.js
     core/      config.js math.js rng.js models.js world.js collision.js rules.js sim.js
                ai/registry.js ai/hunter.js
-               game.js           screen state machine: start, playing, paused, game over
+               game.js           screen state machine: start, playing, respawning, destroyed, paused, game over
                best-score.js     parse and validate a stored value (SEC-22)
     render/    camera.js scene.js hud.js palette.js canvas-renderer.js
     platform/  loop.js input.js audio.js storage.js screens.js test-hook.js
@@ -148,7 +148,7 @@ jsconfig.node.json  the same for scripts/ and test/, with Node types
 | `ai/hunter.js` | The state machine from research §7: spawn, approach, aim, evade, with seek and obstacle-avoidance steering. Its tuning (turn rate, aim tolerance, reload) comes from the current difficulty level (S3). | see above |
 | `rules.js` | Scoring, lives, respawn, spawning enemies clear of obstacles, difficulty level from score, game over. | `applyHit`, `spawnEnemies`, `difficultyFor(score)` |
 | `sim.js` | One fixed step of the whole game. | `step(state, input) → void`, mutates `state`, appends to `state.events` |
-| `game.js` | The screen state machine (start, playing, paused, game over) and restart. | `handleCommand(state, command)` |
+| `game.js` | The screen state machine (start, playing, respawning, destroyed, paused, game over), restart and the small-window resume lock. | `handleCommand(state, command)`, `setWindowTooSmall(state, tooSmall)` |
 | `best-score.js` | Parses a stored string into a safe integer, or rejects it (SEC-22). | `parseBestScore(raw) → number \| null` |
 
 ### 4.2 Game state
@@ -428,7 +428,7 @@ There is no network API, so there is no OpenAPI document. The interfaces that ma
 | Test hook | `window.__WT_TEST__ = { seed }` set before load; the page adds `snapshot(): FrozenGameState & { view }` and `events(): GameEvent[]`, the last 1,000 events since load in order | Playwright only |
 | Storage | key `wireframe-tanks:best-score`, value a decimal integer string | `storage.js` |
 
-Fire acts once per key press, with auto-repeat ignored (BR-01, BR-08, confirmed by Product). The extra screens in `UX_SPEC.md` (Loading, Keyboard needed, Error, Quit to title, auto-pause when the window is too small) are page-level states in `screens.js` and `main.js`. They map onto the four game screens without adding new ones: Quit to title is the `start` screen, and the small-window auto-pause is the `paused` screen.
+Fire acts once per key press, with auto-repeat ignored (BR-01, BR-08, confirmed by Product). The extra screens in `UX_SPEC.md` (Loading, Keyboard needed, Error, Quit to title, auto-pause when the window is too small) are page-level states in `screens.js` and `main.js`. They map onto the six game screens without adding new ones: Quit to title is the `start` screen, and the small-window auto-pause is the `paused` screen.
 
 ## 10. Deployment
 

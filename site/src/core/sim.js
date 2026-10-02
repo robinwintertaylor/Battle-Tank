@@ -1,11 +1,13 @@
 // One fixed step of the whole game (ARCHITECTURE.md 4.3, ADR 0003). Pure:
 // no clock, no browser, no Math.random. Each call is one 1/60 s step.
 //
-// Order (REQUIREMENTS.md 8.2): commands, copy previous positions, move,
-// fire, move shells and resolve hits, screen timers, spawn, tank timers.
-// Enemy intents come from the AI registry in D3; until then enemies stand
-// still and hold fire.
+// Order (REQUIREMENTS.md 8.2, ARCHITECTURE.md 4.3): commands, copy previous
+// positions, intents (player from input, each enemy from its AI kind), move
+// every tank, fire, move shells and resolve hits, screen timers, spawn, tank
+// timers. Screens that do not simulate hold every object still, so the
+// renderer's interpolation shows a frozen scene.
 
+import { AI } from './ai/registry.js';
 import { resolveTankMove, sweepShell } from './collision.js';
 import { CONFIG } from './config.js';
 import { handleCommand } from './game.js';
@@ -19,6 +21,10 @@ import { advanceScreen, applyHit, spawnEnemies, ticksFor } from './rules.js';
 /** @typedef {{ throttle: number, turn: number, firePressed: boolean, commands: Command[] }} InputSnapshot */
 /** @typedef {{ throttle: number, turn: number, fire: boolean }} Intent */
 /** @typedef {{ forwardSpeed: number, reverseSpeed: number, turnRateDeg: number }} Drive */
+/** What an AI may read: the live player (or null), the obstacles, whether its own shell is in flight, and the config.
+ * @typedef {{ player: { pos: Vec2, heading: number } | null, obstacles: readonly Obstacle[], ownShellInFlight: boolean, config: Config }} AiView */
+/** @typedef {import('./math.js').Vec2} Vec2 */
+/** @typedef {import('./world.js').Obstacle} Obstacle */
 
 /** Screens on which the world simulates. Destroyed keeps running for effects (BR-13). */
 const SIMULATED = new Set(['playing', 'respawning', 'destroyed']);
@@ -31,12 +37,12 @@ const SIMULATED = new Set(['playing', 'respawning', 'destroyed']);
 export function step(state, input, config = CONFIG) {
   state.events.length = 0;
   for (const command of input.commands) handleCommand(state, command, config);
-  if (state.screen === 'gameover') {
-    // Only the restart lockout runs here (BR-20).
-    state.tick += 1;
+  if (!SIMULATED.has(state.screen)) {
+    holdStill(state);
+    // On Game over only the restart lockout runs (BR-20).
+    if (state.screen === 'gameover') state.tick += 1;
     return;
   }
-  if (!SIMULATED.has(state.screen)) return;
 
   for (const tank of state.tanks) {
     tank.prevPos = { x: tank.pos.x, z: tank.pos.z };
@@ -45,11 +51,21 @@ export function step(state, input, config = CONFIG) {
 
   const player = state.tanks.find((t) => t.id === state.playerId);
   // While dead, all player input but pause and mute is ignored (BR-13).
-  if (player && player.alive && state.screen === 'playing') {
+  const playerActs = player !== undefined && player.alive && state.screen === 'playing';
+  /** @type {{ tank: Tank, intent: Intent, drive: Drive }[]} */
+  const moves = [];
+  if (playerActs) {
     const drive = { forwardSpeed: config.playerForwardSpeed, reverseSpeed: config.playerReverseSpeed, turnRateDeg: config.playerTurnRateDeg };
-    moveTank(state, player, { throttle: input.throttle, turn: input.turn, fire: input.firePressed }, drive, config);
-    tryFire(state, player, input.firePressed, config);
+    moves.push({ tank: player, intent: { throttle: input.throttle, turn: input.turn, fire: input.firePressed }, drive });
   }
+  for (const tank of state.tanks) {
+    const intent = tank.alive && tank !== player ? think(state, tank, config) : null;
+    if (!intent) continue;
+    const turnRateDeg = tank.tuning ? tank.tuning.turnRateDeg : config.difficulty[0].turnRateDeg;
+    moves.push({ tank, intent, drive: { forwardSpeed: config.enemyDriveSpeed, reverseSpeed: config.enemyDriveSpeed, turnRateDeg } });
+  }
+  for (const m of moves) moveTank(state, m.tank, m.intent, m.drive, config);
+  for (const m of moves) tryFire(state, m.tank, m.intent.fire, config);
 
   moveShells(state, config);
   // A death removes every shell in flight, and none is fired while dead (BR-13).
@@ -62,6 +78,52 @@ export function step(state, input, config = CONFIG) {
     if (tank.graceTicks > 0) tank.graceTicks -= 1;
   }
   state.tick += 1;
+}
+
+/**
+ * Asks an enemy's AI kind for its intent, and emits `enemy-aiming` when the
+ * AI moves into its `aim` state (ARCHITECTURE.md 4.2). A tank with no AI, or
+ * of an unregistered kind, has no intent: it stands still and holds fire.
+ * @param {GameState} state @param {Tank} tank @param {Config} config
+ * @returns {Intent | null}
+ */
+function think(state, tank, config) {
+  const control = tank.control;
+  const ai = control.type === 'ai' ? AI[tank.kind] : undefined;
+  if (!ai || control.type !== 'ai') return null;
+  const memory = /** @type {{ state?: string }} */ (control.memory);
+  const before = memory.state;
+  const intent = ai.think(memory, tank, aiView(state, tank, config), state);
+  if (memory.state === 'aim' && before !== 'aim') state.events.push({ type: 'enemy-aiming', tick: state.tick, tankId: tank.id });
+  return intent;
+}
+
+/**
+ * The read-only summary of the world an AI decides from (ARCHITECTURE.md 9).
+ * @param {GameState} state @param {Tank} tank @param {Config} [config]
+ * @returns {AiView}
+ */
+export function aiView(state, tank, config = CONFIG) {
+  const player = state.tanks.find((t) => t.id === state.playerId && t.alive);
+  return {
+    player: player ? { pos: { x: player.pos.x, z: player.pos.z }, heading: player.heading } : null,
+    obstacles: state.obstacles,
+    ownShellInFlight: state.shells.some((s) => s.ownerId === tank.id),
+    config,
+  };
+}
+
+/**
+ * Sets every tank's and shell's previous position to its current one, so a
+ * scene that is not simulating renders still at any `alpha`.
+ * @param {GameState} state
+ */
+function holdStill(state) {
+  for (const tank of state.tanks) {
+    tank.prevPos = { x: tank.pos.x, z: tank.pos.z };
+    tank.prevHeading = tank.heading;
+  }
+  for (const shell of state.shells) shell.prevPos = { x: shell.pos.x, z: shell.pos.z };
 }
 
 /**
