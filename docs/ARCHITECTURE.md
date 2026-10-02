@@ -223,6 +223,7 @@ Player and enemy tanks go through the same movement, firing and collision code. 
 | `hud` | `--wt-color-text` | 2 | solid |
 | `hudDim` | `--wt-color-text-dim` | 2 | solid |
 | `crosshairDim` | `--wt-color-text-dim` | 2 | `[3, 5]`: the "cannot fire" crosshair |
+| `aimRing` | `--wt-color-enemy` | 2 | solid: the aiming ring on the bearing tape, a HUD key so it neither shakes nor shares the tank's buffer (`UX_SPEC.md` §6.4) |
 | `chevron` | `--wt-color-enemy` | 4 | solid: the edge chevron (`UX_SPEC.md` §6.5) |
 | `chevronAlert` | `--wt-color-alert` | 8 | solid: the chevron for K-30 after an out-of-view enemy shot |
 | `alert` | `--wt-color-alert` | 10 (hit frame) | solid |

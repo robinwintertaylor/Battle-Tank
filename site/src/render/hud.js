@@ -122,7 +122,7 @@ export function buildHud(state, memory, opts, out, extras, config = CONFIG) {
     const ai = enemy.control.type === 'ai' ? /** @type {{ state?: string }} */ (enemy.control.memory) : {};
     // The aiming ring pulses at 2 Hz, or stays steady under reduced motion (6.4).
     const pulseOn = opts.reducedMotion || Math.floor((now * config.stepSeconds) / (config.aimPulseSeconds / 2)) % 2 === 0;
-    if (ai.state === 'aim' && pulseOn) ring(out.enemy, mx, my, RING_RADIUS);
+    if (ai.state === 'aim' && pulseOn) ring(out.aimRing, mx, my, RING_RADIUS);
     if (Math.abs(rel) > halfFov) {
       // Alert colour for K-30 after an enemy shot, once per shot (6.5, X6).
       const flash = now - memory.enemyShotAt < ticks(config.enemyShotFlashMs / 1000, config);

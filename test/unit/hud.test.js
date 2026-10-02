@@ -8,7 +8,10 @@ import { applyHit } from '../../site/src/core/rules.js';
 import { step } from '../../site/src/core/sim.js';
 import { horizontalFov } from '../../site/src/render/camera.js';
 import { buildHud, createHudMemory, noteEvents, relativeBearing } from '../../site/src/render/hud.js';
-import { createBuckets } from '../../site/src/render/palette.js';
+import { MODELS } from '../../site/src/core/models.js';
+import { projectBuckets } from '../../site/src/render/camera.js';
+import { PALETTE_SPEC, STROKE_KEYS, createBuckets } from '../../site/src/render/palette.js';
+import { buildScene, cameraFor } from '../../site/src/render/scene.js';
 import { close, input, player, playing, shellAtPlayer, stepsFor } from './support.js';
 
 /** @typedef {import('../../site/src/core/world.js').GameState} GameState */
@@ -154,13 +157,28 @@ test('6.4 an aiming enemy gets a ring that pulses at 2 Hz, or is steady with red
   enemy.control = { type: 'ai', memory: { state: 'aim' } };
   const half = stepsFor(CONFIG.aimPulseSeconds / 2);
   state.tick = 0;
-  assert.equal(hud(state).out.enemy.count, 16);
+  assert.equal(hud(state).out.aimRing.count, 16);
   state.tick = half;
-  assert.equal(hud(state).out.enemy.count, 0, 'off for the second quarter-second');
-  assert.equal(hud(state, undefined, { reducedMotion: true }).out.enemy.count, 16);
+  assert.equal(hud(state).out.aimRing.count, 0, 'off for the second quarter-second');
+  assert.equal(hud(state, undefined, { reducedMotion: true }).out.aimRing.count, 16);
   enemy.control = { type: 'ai', memory: { state: 'approach' } };
   state.tick = 0;
-  assert.equal(hud(state).out.enemy.count, 0);
+  assert.equal(hud(state).out.aimRing.count, 0);
+});
+
+test('6.4 a visible aiming enemy gets its whole tank and its whole ring, and the ring does not shake', () => {
+  const { state, enemy } = playing(1, { x: 0, z: 30 }); // straight ahead, in view
+  enemy.control = { type: 'ai', memory: { state: 'aim' } };
+  state.tick = 0;
+  const out = createBuckets(4);
+  const out3 = createBuckets(6);
+  const cam = cameraFor(state, 1);
+  buildScene(state, 1, cam, out3);
+  projectBuckets(out3, cam, VP, CONFIG.fovVerticalDeg, CONFIG.nearPlane, out, STROKE_KEYS);
+  buildHud(state, createHudMemory(), { viewport: VP, alpha: 1, reducedMotion: false, muted: false, best: 0 }, out, { fills: [], texts: [] });
+  assert.equal(out.enemy.count, MODELS.tank.edges.length);
+  assert.equal(out.aimRing.count, 16);
+  assert.equal(PALETTE_SPEC.aimRing.layer, 'hud');
 });
 
 test('AC-14.1 AC-14.4 a hit shows the alert frame for K-23, shakes for K-28, and the HIT banner through Respawning', () => {

@@ -51,7 +51,8 @@ export const CONFIG = deepFreeze({
   restartLockoutSeconds: 1, // K-17
   pointsPerLevel: 500, // K-18
   maxLevel: 5, // K-19
-  maxEnemies: 1, // K-25; Phase 2 raises it (ADR 0004)
+  maxEnemies: 1, // K-25; Phase 2 raises it (ADR 0004). Raising it also means raising the
+  // enemy, enemyGrace and enemyShell capacities in render/palette.js, sized for one tank.
   gameOverDelaySeconds: 1.5, // K-27
 
   // Timing (ADR 0003)

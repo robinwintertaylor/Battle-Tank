@@ -2,11 +2,13 @@
 // (ARCHITECTURE.md 4.4, UX_SPEC.md 8.2). Pure: main.js reads the tokens once
 // at start-up and resolvePalette turns them into stroke styles.
 //
-// Three keys go beyond the 4.4 table because one key is one stroke style:
-// `crosshairDim` (the dashed "cannot fire" crosshair, UX_SPEC.md 6.3), and
-// `chevron` and `chevronAlert` (the 4 px and 8 px edge chevron, 6.5).
+// Four keys go beyond the original 4.4 table because one key is one stroke
+// style or layer: `crosshairDim` (the dashed "cannot fire" crosshair,
+// UX_SPEC.md 6.3), `aimRing` (the aiming ring on the tape, which must not
+// shake or share the tank's bucket, 6.4), and `chevron` and `chevronAlert`
+// (the 4 px and 8 px edge chevron, 6.5).
 
-/** @typedef {'horizon' | 'world' | 'playerShell' | 'enemyGrace' | 'enemy' | 'enemyShell' | 'hudDim' | 'crosshairDim' | 'hud' | 'chevron' | 'chevronAlert' | 'alert'} PaletteKey */
+/** @typedef {'horizon' | 'world' | 'playerShell' | 'enemyGrace' | 'enemy' | 'enemyShell' | 'hudDim' | 'crosshairDim' | 'hud' | 'aimRing' | 'chevron' | 'chevronAlert' | 'alert'} PaletteKey */
 /** @typedef {{ token: string, width: number, dash: readonly number[], capacity: number, layer: 'world' | 'hud' }} StrokeSpec */
 /** @typedef {{ color: string, width: number, dash: readonly number[] }} Stroke */
 /** @typedef {{ background: string, font: string, strokes: Record<PaletteKey, Stroke> }} Palette */
@@ -30,6 +32,7 @@ export const PALETTE_SPEC = Object.freeze({
   hudDim: { token: '--wt-color-text-dim', width: 2, dash: [], capacity: 64, layer: 'hud' },
   crosshairDim: { token: '--wt-color-text-dim', width: 2, dash: [3, 5], capacity: 32, layer: 'hud' },
   hud: { token: '--wt-color-text', width: 2, dash: [], capacity: 96, layer: 'hud' },
+  aimRing: { token: '--wt-color-enemy', width: 2, dash: [], capacity: 16, layer: 'hud' },
   chevron: { token: '--wt-color-enemy', width: 4, dash: [], capacity: 4, layer: 'hud' },
   chevronAlert: { token: '--wt-color-alert', width: 8, dash: [], capacity: 4, layer: 'hud' },
   alert: { token: '--wt-color-alert', width: 10, dash: [], capacity: 8, layer: 'hud' },
