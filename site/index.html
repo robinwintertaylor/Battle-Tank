@@ -1,16 +1,78 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-GB">
   <head>
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="referrer" content="no-referrer">
+    <meta name="description" content="A free first-person wireframe tank duel that runs in your browser.">
     <title>Wireframe Tanks</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="styles.css">
     <script type="module" src="src/main.js"></script>
   </head>
   <body>
-    <noscript>Wireframe Tanks needs JavaScript and a current browser.</noscript>
+    <div id="wt-game" class="wt-game" tabindex="-1">
+      <canvas id="wt-canvas" class="wt-canvas" role="img" aria-label="Wireframe Tanks game view"></canvas>
+    </div>
+
+    <section id="wt-start" class="wt-overlay" aria-labelledby="wt-start-title">
+      <div class="wt-panel">
+        <h1 id="wt-start-title" class="wt-title">Wireframe Tanks</h1>
+        <p class="wt-tagline">One tank. One rival. Find it before it finds you.</p>
+        <dl class="wt-keys">
+          <dt>Drive</dt><dd><kbd>W</kbd> <kbd>S</kbd> or <kbd>↑</kbd> <kbd>↓</kbd></dd>
+          <dt>Turn</dt><dd><kbd>A</kbd> <kbd>D</kbd> or <kbd>←</kbd> <kbd>→</kbd></dd>
+          <dt>Fire</dt><dd><kbd>Space</kbd></dd>
+          <dt>Pause</dt><dd><kbd>P</kbd> or <kbd>Esc</kbd></dd>
+          <dt>Sound</dt><dd><kbd>M</kbd></dd>
+        </dl>
+        <button id="wt-start-button" class="wt-button wt-primary" type="button" disabled>Loading…</button>
+        <p class="wt-hint">or press <kbd>Enter</kbd></p>
+        <p id="wt-start-best" class="wt-hint" hidden></p>
+      </div>
+    </section>
+
+    <section id="wt-paused" class="wt-overlay" role="dialog" aria-modal="true" aria-labelledby="wt-paused-title" tabindex="-1" hidden>
+      <div class="wt-panel">
+        <h2 id="wt-paused-title" class="wt-heading">Paused</h2>
+        <p id="wt-paused-small" class="wt-warning" hidden>Make the window larger to keep playing.</p>
+        <button id="wt-resume" class="wt-button wt-primary" type="button">Resume</button>
+        <button id="wt-quit" class="wt-button" type="button">Quit to title</button>
+        <p class="wt-hint">Press <kbd>P</kbd> or <kbd>Esc</kbd> to resume</p>
+      </div>
+    </section>
+
+    <section id="wt-gameover" class="wt-overlay" aria-labelledby="wt-gameover-title" hidden>
+      <div class="wt-panel">
+        <h2 id="wt-gameover-title" class="wt-heading">Game over</h2>
+        <p id="wt-over-score" class="wt-score">0</p>
+        <p id="wt-over-best" class="wt-hint" hidden></p>
+        <div id="wt-over-actions" hidden>
+          <button id="wt-again" class="wt-button wt-primary" type="button">Play again</button>
+          <button id="wt-title" class="wt-button" type="button">Title screen</button>
+          <p class="wt-hint">or press <kbd>Enter</kbd></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="wt-keyboard" class="wt-overlay" aria-labelledby="wt-keyboard-title" hidden>
+      <div class="wt-panel">
+        <h2 id="wt-keyboard-title" class="wt-heading">Keyboard needed</h2>
+        <p>Wireframe Tanks is played with a keyboard on a screen at least 640 × 400 pixels. Touch controls are not available yet.</p>
+        <button id="wt-keyboard-button" class="wt-button wt-primary" type="button">Play anyway</button>
+      </div>
+    </section>
+
+    <section id="wt-error" class="wt-overlay" role="alertdialog" aria-modal="true" aria-labelledby="wt-error-title" aria-describedby="wt-error-body" hidden>
+      <div class="wt-panel">
+        <h2 id="wt-error-title" class="wt-heading">Something went wrong</h2>
+        <p id="wt-error-body">The game stopped unexpectedly. Reload the page to play again.</p>
+        <button id="wt-reload" class="wt-button wt-primary" type="button">Reload</button>
+      </div>
+    </section>
+
+    <div id="wt-live" class="wt-visually-hidden" role="status" aria-live="polite"></div>
+    <noscript><p class="wt-noscript">Wireframe Tanks needs JavaScript. Turn it on and reload the page.</p></noscript>
   </body>
 </html>

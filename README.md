@@ -8,6 +8,27 @@ MVP scope: single-player, desktop keyboard controls, static site with no backend
 
 Build. Plain JavaScript modules on a 2D canvas, with no build step ([ARCHITECTURE.md](docs/ARCHITECTURE.md)).
 
+## Play it locally
+
+Needs Node.js 22 or later and a desktop browser.
+
+```sh
+npm ci
+npm run serve
+```
+
+Open http://127.0.0.1:8080/Battle-Tank/ and press Enter.
+
+| Action | Keys |
+|---|---|
+| Drive | W / S or ↑ / ↓ |
+| Turn | A / D or ← / → |
+| Fire | Space |
+| Pause | P or Esc |
+| Sound on/off | M |
+
+Sound arrives with the audio build step (D6); until then the game is silent.
+
 ## Develop
 
 Needs Node.js 22 or later.

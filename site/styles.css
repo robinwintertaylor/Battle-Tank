@@ -1,6 +1,171 @@
+/* Design tokens (UX_SPEC.md 8). The canvas palette is read from these same
+   properties once at start-up, so there is one source of truth. */
+:root {
+  --wt-color-bg: #070a12;
+  --wt-color-overlay: rgba(7, 10, 18, 0.88);
+  --wt-color-world: #3fc9db;
+  --wt-color-horizon: #2f9fb0;
+  --wt-color-enemy: #ffb547;
+  --wt-color-text: #e3f6f8;
+  --wt-color-text-dim: #8fb3bc;
+  --wt-color-alert: #ff6b81;
+  --wt-color-focus: #ffe066;
+  --wt-font: ui-monospace, "Cascadia Mono", Consolas, Menlo, "DejaVu Sans Mono", monospace;
+  --wt-text-sm: 0.875rem;
+  --wt-text-md: 1rem;
+  --wt-text-lg: 1.25rem;
+  --wt-text-xl: 1.75rem;
+  --wt-text-title: clamp(2rem, 6vw, 3.5rem);
+  --wt-space-1: 4px;
+  --wt-space-2: 8px;
+  --wt-space-3: 12px;
+  --wt-space-4: 16px;
+  --wt-space-6: 24px;
+  --wt-space-8: 32px;
+}
+
 html,
 body {
   margin: 0;
   height: 100%;
-  background: #000;
+  overflow: hidden;
+  background: var(--wt-color-bg);
+  color: var(--wt-color-text);
+  font-family: var(--wt-font);
+  font-size: var(--wt-text-md);
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.wt-game {
+  position: fixed;
+  inset: 0;
+  outline: none;
+}
+
+.wt-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.wt-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  background: var(--wt-color-overlay);
+  outline: none;
+}
+
+.wt-panel {
+  max-width: 36rem;
+  padding: var(--wt-space-6);
+  text-align: center;
+}
+
+.wt-title {
+  margin: 0 0 var(--wt-space-3);
+  font-size: var(--wt-text-title);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wt-heading {
+  margin: 0 0 var(--wt-space-4);
+  font-size: var(--wt-text-xl);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.wt-tagline,
+.wt-hint {
+  color: var(--wt-color-text-dim);
+}
+
+.wt-hint {
+  font-size: var(--wt-text-sm);
+}
+
+.wt-warning {
+  color: var(--wt-color-alert);
+}
+
+.wt-score {
+  margin: 0;
+  font-size: var(--wt-text-title);
+}
+
+.wt-keys {
+  display: grid;
+  grid-template-columns: max-content auto;
+  gap: var(--wt-space-2) var(--wt-space-4);
+  justify-content: center;
+  margin: var(--wt-space-6) 0;
+  text-align: left;
+}
+
+.wt-keys dt {
+  color: var(--wt-color-text-dim);
+}
+
+.wt-keys dd {
+  margin: 0;
+}
+
+kbd {
+  padding: 0 var(--wt-space-1);
+  border: 1px solid var(--wt-color-text-dim);
+  border-radius: 3px;
+  font-family: inherit;
+}
+
+.wt-button {
+  min-width: 44px;
+  min-height: 44px;
+  margin: var(--wt-space-2);
+  padding: var(--wt-space-2) var(--wt-space-6);
+  border: 2px solid var(--wt-color-world);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--wt-color-text);
+  font: inherit;
+  font-size: var(--wt-text-lg);
+  cursor: pointer;
+}
+
+.wt-primary {
+  background: var(--wt-color-world);
+  color: var(--wt-color-bg);
+}
+
+.wt-button:disabled {
+  border-color: var(--wt-color-text-dim);
+  background: transparent;
+  color: var(--wt-color-text-dim);
+  cursor: default;
+}
+
+.wt-button:focus-visible,
+.wt-button:focus {
+  outline: 3px solid var(--wt-color-focus);
+  outline-offset: 3px;
+}
+
+.wt-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.wt-noscript {
+  padding: var(--wt-space-6);
+  text-align: center;
 }
