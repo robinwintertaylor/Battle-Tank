@@ -36,6 +36,7 @@ function fakeAudio({ resume = () => Promise.resolve() } = {}) {
   const made = [];
   class FakeContext {
     state = 'suspended';
+    closed = false;
     currentTime = 0;
     sampleRate = 48000;
     destination = { kind: 'destination' };
@@ -47,6 +48,10 @@ function fakeAudio({ resume = () => Promise.resolve() } = {}) {
     resume() {
       this.state = 'running';
       return resume();
+    }
+    close() {
+      this.closed = true;
+      return Promise.reject(new Error('already closed'));
     }
     /** @param {string} kind @param {Record<string, unknown>} [extra] */
     node(kind, extra = {}) {
@@ -260,4 +265,5 @@ test('BR-27 if Web Audio throws while playing, sound switches off and the game c
   audio.unlock();
   audio.play(shot, state);
   assert.equal(made.length, 1, 'no new context is tried');
+  assert.equal(made[0].closed, true, 'and the failed context is closed');
 });

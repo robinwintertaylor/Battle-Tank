@@ -108,9 +108,14 @@ export function createAudio(win) {
   let broken = false;
   let muted = false;
 
-  // Web Audio failed: drop it and carry on in silence.
+  // Web Audio failed: close it if we can, and carry on in silence.
   const disable = () => {
     broken = true;
+    try {
+      ctx?.close().catch(() => {});
+    } catch {
+      // Closing is best effort.
+    }
     ctx = null;
     master = null;
   };
