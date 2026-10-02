@@ -143,19 +143,28 @@ function fail(err) {
   console.error(err);
   screens.show(overlayFor(state, page, { best, newBest }));
 }
-/** @param {() => void} fn */
-const guarded = (fn) => () => {
-  try {
-    fn();
-  } catch (err) {
-    fail(err);
-  }
-};
+/**
+ * Wraps a frame callback so any error goes to fail(). It forwards render's
+ * alpha itself, so no closure is made per frame (ARCHITECTURE.md 6.1).
+ * @template {(arg?: any) => void} F
+ * @param {F} fn
+ * @returns {F}
+ */
+const guarded = (fn) =>
+  /** @type {F} */ (
+    (arg) => {
+      try {
+        fn(arg);
+      } catch (err) {
+        fail(err);
+      }
+    }
+  );
 const loop = startLoop({
   now: () => performance.now(),
   requestFrame: (cb) => requestAnimationFrame(cb),
   step: guarded(simulate),
-  render: (alpha) => guarded(() => render(alpha))(),
+  render: guarded(render),
 });
 addEventListener('error', (e) => fail(e.error ?? e.message));
 addEventListener('unhandledrejection', (e) => fail(e.reason));
