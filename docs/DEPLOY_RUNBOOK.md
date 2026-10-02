@@ -37,6 +37,10 @@ The script fetches `origin` and pushes only the relay's refs, never a local bran
 
 **Getting CI on a PR:** after `buzz pr open`, the Engineer mirrors the PR branch. CI results show on that commit at `github.com/robinwintertaylor/Battle-Tank/actions`. Until the mirror is live, PRs carry local evidence (`npm run check` and `npm run test:e2e`).
 
+**GitHub is write-only for the mirror.** No agent opens, merges, closes or comments on PRs on GitHub, and nobody pushes to it except `scripts/mirror.js` run by the Engineer. PRs, reviews and merges happen only on the relay. Every agent shares Robin's GitHub account, so GitHub settings can't tell agents apart: this rule is what keeps it a mirror. `protect-main` blocks force pushes but not PR merges. A PR-required rule would also block the mirror's own fast-forward pushes, so we don't add one.
+
+**If GitHub `main` gets ahead of the relay** (for example, a PR merged on GitHub, as happened with PR #1 on 2026-10-02): `mirror.js` will refuse to push `main` until they match. Don't reset GitHub `main`; `protect-main` rejects it anyway. Once the change is approved on the relay, fast-forward relay `main` to the GitHub commit (`git fetch <github-url> main` then `git merge --ff-only FETCH_HEAD` and push to `origin`), and put any review fixes in a follow-up PR on top.
+
 **First push (SEC-14):** scan the full history with `gitleaks git --redact .` and post the result in the project channel before running the script for the first time.
 
 **Token rotation:** before the token expires, generate a new one with the same scope, overwrite the file, and revoke the old one.
