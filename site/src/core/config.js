@@ -68,6 +68,10 @@ export const CONFIG = deepFreeze({
   minWindowWidth: 640, // K-29, CSS px
   minWindowHeight: 400, // K-29, CSS px
   enemyShotFlashMs: 300, // K-30
+  pointsBannerSeconds: 1.0, // UX_SPEC.md 8.6 pointsBannerMs
+  aimPulseSeconds: 0.5, // UX_SPEC.md 8.6 aimPulseMs: the aiming ring's full period
+  nearPlane: 0.1, // u: segments are clipped here before projection (ARCHITECTURE.md 5.1)
+  farDistance: 500, // u: objects further than this are culled before projection
   fovVerticalDeg: 40, // UX-D6
   eyeHeight: 2.2, // u, UX_SPEC.md 7.1
   shellHeight: 1.6, // u, UX_SPEC.md 7.1

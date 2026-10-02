@@ -221,7 +221,10 @@ Player and enemy tanks go through the same movement, firing and collision code. 
 | `enemyShell` | `--wt-color-enemy` | 2 | solid |
 | `enemyGrace` | `--wt-color-enemy` | 2 | `[6, 4]` |
 | `hud` | `--wt-color-text` | 2 | solid |
-| `hudDim` | `--wt-color-text-dim` | 2 | solid; the "cannot fire" crosshair uses `[3, 5]` |
+| `hudDim` | `--wt-color-text-dim` | 2 | solid |
+| `crosshairDim` | `--wt-color-text-dim` | 2 | `[3, 5]`: the "cannot fire" crosshair |
+| `chevron` | `--wt-color-enemy` | 4 | solid: the edge chevron (`UX_SPEC.md` §6.5) |
+| `chevronAlert` | `--wt-color-alert` | 8 | solid: the chevron for K-30 after an out-of-view enemy shot |
 | `alert` | `--wt-color-alert` | 10 (hit frame) | solid |
 
 - **One source of truth for colour:** `main.js` reads the colour tokens once at start-up with `getComputedStyle(document.documentElement)` and passes the resolved palette to the renderer (`UX_SPEC.md` §8). `palette.js` holds only keys, widths, dashes and token names, so it stays pure and testable.
