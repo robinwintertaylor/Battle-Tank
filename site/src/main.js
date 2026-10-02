@@ -1,13 +1,14 @@
 // Bootstrap and wiring (ARCHITECTURE.md 3 and 4.5). The only module that
 // knows every layer: it creates the state, wires input, the loop, the
-// renderer, the screens, storage and the test hook, and installs the error
-// handler. Everything else gets what it needs passed in.
+// renderer, audio, the screens, storage and the test hook, and installs the
+// error handler. Everything else gets what it needs passed in.
 
 import { CONFIG } from './core/config.js';
 import { setWindowTooSmall } from './core/game.js';
 import { step } from './core/sim.js';
 import { createWorld } from './core/world.js';
 import { createInput, keyDown, keyUp, queue, releaseAll, takeSnapshot } from './platform/input.js';
+import { createAudio } from './platform/audio.js';
 import { startLoop } from './platform/loop.js';
 import { announcementFor, createScreens, overlayFor } from './platform/screens.js';
 import { loadBest, openStorage, saveBest } from './platform/storage.js';
@@ -36,6 +37,7 @@ const finePointer = matchMedia('(any-pointer: fine)');
 const state = createWorld(seed, CONFIG);
 const input = createInput();
 const storage = openStorage(window);
+const audio = createAudio(window);
 const hudMemory = createHudMemory();
 const world3d = createBuckets(6);
 const frame2d = createBuckets(4);
@@ -50,12 +52,15 @@ const tooSmall = () => innerWidth < CONFIG.minWindowWidth || innerHeight < CONFI
 let page = !finePointer.matches || tooSmall() ? 'keyboard' : 'ready';
 
 // Keys (BR-01). Single-key controls act only while the page has focus.
+// The first key press or click also starts audio (AC-01.4, ADR 0006).
 addEventListener('keydown', (e) => {
+  audio.unlock();
   if (page === 'error') return;
   if (page !== 'ready' && e.code !== 'KeyM') return;
   if (keyDown(input, e, state.screen)) e.preventDefault();
 });
 addEventListener('keyup', (e) => keyUp(input, e));
+addEventListener('pointerdown', () => audio.unlock());
 
 // Auto-pause (BR-22): the tab is hidden, or the window loses focus.
 addEventListener('blur', () => {
@@ -80,17 +85,21 @@ onClick('wt-keyboard-button', () => {
 });
 onClick('wt-reload', () => location.reload());
 
-// One simulation step. Its events go to the HUD, the test hook, the live
-// region and the best score here, inside the step loop, before the next
+// One simulation step. Its events go to the HUD, audio, the test hook, the
+// live region and the best score here, inside the step loop, before the next
 // step clears them (ARCHITECTURE.md 4.2).
 function simulate() {
   const before = state.screen;
   const snapshot = takeSnapshot(input);
-  if (snapshot.commands.includes('mute')) muted = !muted; // BR-23: session only, never stored
+  if (snapshot.commands.includes('mute')) {
+    muted = !muted; // BR-23: session only, never stored
+    audio.setMuted(muted);
+  }
   if (before === 'start' && snapshot.commands.includes('start')) newBest = false;
   if (before === 'gameover' && snapshot.commands.includes('restart')) newBest = false;
   step(state, snapshot);
   noteEvents(hudMemory, state, state.events);
+  audio.play(state.events, state);
   hook?.record(state.events);
   for (const e of state.events) {
     if (e.type === 'game-over') {

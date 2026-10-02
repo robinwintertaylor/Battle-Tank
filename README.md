@@ -27,7 +27,7 @@ Open http://127.0.0.1:8080/Battle-Tank/ and press Enter.
 | Pause | P or Esc |
 | Sound on/off | M |
 
-Sound arrives with the audio build step (D6); until then the game is silent.
+Sound starts after your first key press or click, as browsers require. Every sound has an on-screen cue, so the game plays fully muted.
 
 ## Develop
 
