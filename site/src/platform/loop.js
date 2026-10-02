@@ -25,3 +25,34 @@ export function advance(acc, elapsedMs) {
   if (next >= CONFIG.stepMs) next = 0;
   return { steps, acc: next, alpha: next / CONFIG.stepMs };
 }
+
+/**
+ * Drives the game from requestAnimationFrame (ARCHITECTURE.md 5.2). The
+ * clock and the frame scheduler are passed in, so a test can drive it.
+ * `step` runs once per simulation step, so the caller hands each step's
+ * events on before the next step clears them; `render` runs once per frame.
+ * If either throws, no further frame is requested, so the loop stops and the
+ * error reaches the page's error handler (BR-27).
+ * @param {{ now: () => number, requestFrame: (cb: (t: number) => void) => unknown, step: () => void, render: (alpha: number) => void }} deps
+ */
+export function startLoop({ now, requestFrame, step, render }) {
+  let acc = 0;
+  let last = now();
+  let running = true;
+  /** @param {number} t */
+  const frame = (t) => {
+    if (!running) return;
+    const r = advance(acc, t - last);
+    last = t;
+    acc = r.acc;
+    for (let i = 0; i < r.steps; i++) step();
+    render(r.alpha);
+    requestFrame(frame);
+  };
+  requestFrame(frame);
+  return {
+    stop() {
+      running = false;
+    },
+  };
+}
