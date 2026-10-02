@@ -12,6 +12,7 @@ import { resolveTankMove, sweepShell } from './collision.js';
 import { CONFIG } from './config.js';
 import { handleCommand } from './game.js';
 import { clamp, degToRad, forward, wrapAngle } from './math.js';
+import { nextFloat } from './rng.js';
 import { advanceScreen, applyHit, spawnEnemies, ticksFor } from './rules.js';
 
 /** @typedef {import('./world.js').GameState} GameState */
@@ -89,11 +90,13 @@ export function step(state, input, config = CONFIG) {
  */
 function think(state, tank, config) {
   const control = tank.control;
-  const ai = control.type === 'ai' ? AI[tank.kind] : undefined;
+  // Own keys only, so a kind such as 'constructor' cannot reach Object.prototype.
+  const ai = control.type === 'ai' && Object.hasOwn(AI, tank.kind) ? AI[tank.kind] : undefined;
   if (!ai || control.type !== 'ai') return null;
   const memory = /** @type {{ state?: string }} */ (control.memory);
   const before = memory.state;
-  const intent = ai.think(memory, tank, aiView(state, tank, config), state);
+  // The AI gets a random source, not the state, so it can read but never write the world.
+  const intent = ai.think(memory, tank, aiView(state, tank, config), () => nextFloat(state));
   if (memory.state === 'aim' && before !== 'aim') state.events.push({ type: 'enemy-aiming', tick: state.tick, tankId: tank.id });
   return intent;
 }

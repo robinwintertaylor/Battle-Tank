@@ -6,7 +6,6 @@
 
 import { isClear, sweepShell } from '../collision.js';
 import { clamp, degToRad, distance, forward, wrapAngle } from '../math.js';
-import { nextFloat } from '../rng.js';
 
 /** @typedef {import('../math.js').Vec2} Vec2 */
 /** @typedef {import('../world.js').Tank} Tank */
@@ -28,11 +27,12 @@ export function createMemory() {
 
 /**
  * One step of thinking for one hunter. Reads the world through `view`, keeps
- * its own state in `memory`, and draws any randomness from `rng`.
- * @param {HunterMemory} memory @param {Tank} tank @param {AiView} view @param {{ rng: number }} rng
+ * its own state in `memory`, and draws any randomness from `random`, which
+ * returns a seeded float in [0, 1).
+ * @param {HunterMemory} memory @param {Tank} tank @param {AiView} view @param {() => number} random
  * @returns {Intent}
  */
-export function think(memory, tank, view, rng) {
+export function think(memory, tank, view, random) {
   const h = view.config.hunter;
   const ticks = (/** @type {number} */ seconds) => Math.round(seconds / view.config.stepSeconds);
   memory.ticks += 1;
@@ -51,7 +51,7 @@ export function think(memory, tank, view, rng) {
     memory.state = next;
     memory.ticks = 0;
     if (next === 'evade') {
-      memory.evadeTurn = nextFloat(rng) < 0.5 ? -1 : 1;
+      memory.evadeTurn = random() < 0.5 ? -1 : 1;
       memory.evadeCooldown = ticks(h.evadeCooldownSeconds);
     }
   };

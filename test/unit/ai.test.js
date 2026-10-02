@@ -7,7 +7,7 @@ import { AI } from '../../site/src/core/ai/registry.js';
 import { isClear } from '../../site/src/core/collision.js';
 import { CONFIG } from '../../site/src/core/config.js';
 import { degToRad, distance, wrapAngle } from '../../site/src/core/math.js';
-import { nextRange, normaliseSeed } from '../../site/src/core/rng.js';
+import { nextFloat, nextRange, normaliseSeed } from '../../site/src/core/rng.js';
 import { newGame } from '../../site/src/core/rules.js';
 import { aiView, step } from '../../site/src/core/sim.js';
 import { createWorld } from '../../site/src/core/world.js';
@@ -42,7 +42,7 @@ function duel(at, heading, seed = 1) {
 
 /** @param {GameState} state @param {Tank} enemy */
 const think = (state, enemy) =>
-  hunter.think(/** @type {HunterMemory} */ (/** @type {{ memory: object }} */ (enemy.control).memory), enemy, aiView(state, enemy, CONFIG), state);
+  hunter.think(/** @type {HunterMemory} */ (/** @type {{ memory: object }} */ (enemy.control).memory), enemy, aiView(state, enemy, CONFIG), () => nextFloat(state));
 
 test('ADR 0004 the registry maps hunter to a controller, and each enemy gets its own memory', () => {
   assert.equal(typeof hunter.think, 'function');
@@ -208,12 +208,14 @@ test('enemy-aiming is emitted once each time the enemy enters Aim', () => {
   assert.deepEqual(ticks, [0]);
 });
 
-test('a tank of an unregistered kind stands still and holds fire', () => {
-  const { state, enemy } = duel({ x: 60, z: 0 });
-  enemy.kind = 'nobody';
-  run(state, idle, 30);
-  assert.deepEqual(enemy.pos, { x: 60, z: 0 });
-  assert.equal(state.shells.length, 0);
+test('a tank of an unregistered kind stands still and holds fire, even one named after an Object property', () => {
+  for (const kind of ['nobody', 'constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+    const { state, enemy } = duel({ x: 60, z: 0 });
+    enemy.kind = kind;
+    run(state, idle, 30);
+    assert.deepEqual(enemy.pos, { x: 60, z: 0 }, kind);
+    assert.equal(state.shells.length, 0, kind);
+  }
 });
 
 test('AC-06.5 with a wall between them, in at least 95 of 100 seeds the enemy fires within 30 s and never overlaps an obstacle', () => {

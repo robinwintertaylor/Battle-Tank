@@ -7,7 +7,7 @@ import * as hunter from './hunter.js';
 /** @typedef {import('../world.js').Tank} Tank */
 /** @typedef {import('../sim.js').Intent} Intent */
 /** @typedef {import('../sim.js').AiView} AiView */
-/** @typedef {{ createMemory: () => object, think: (memory: any, tank: Tank, view: AiView, rng: { rng: number }) => Intent }} Controller */
+/** @typedef {{ createMemory: () => object, think: (memory: any, tank: Tank, view: AiView, random: () => number) => Intent }} Controller */
 
 /** @type {Readonly<Record<string, Controller>>} */
 export const AI = Object.freeze({ hunter });
