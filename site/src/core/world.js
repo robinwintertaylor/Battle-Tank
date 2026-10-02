@@ -14,12 +14,20 @@ import { normaliseSeed } from './rng.js';
  *   id: number, side: 'player' | 'enemy', kind: string,
  *   pos: Vec2, prevPos: Vec2, heading: number, prevHeading: number,
  *   alive: boolean, reload: number, graceTicks: number,
- *   control: { type: 'player' } | { type: 'ai', memory: object }
+ *   control: { type: 'player' } | { type: 'ai', memory: object },
+ *   tuning: Tuning | null
  * }} Tank */
-/** @typedef {{ id: number, ownerId: number, pos: Vec2, prevPos: Vec2, vel: Vec2, ticksLeft: number }} Shell */
+/** Difficulty values an enemy takes at spawn and keeps (BR-17). Null for the player.
+ * @typedef {{ level: number, turnRateDeg: number, aimToleranceDeg: number, reloadTicks: number }} Tuning */
+/** `side` is the firing tank's side, kept on the shell because the tank may be gone before the shell lands.
+ * @typedef {{ id: number, ownerId: number, side: 'player' | 'enemy', pos: Vec2, prevPos: Vec2, vel: Vec2, ticksLeft: number }} Shell */
 /** @typedef {{ type: string, tick: number, [detail: string]: unknown }} GameEvent */
+/** @typedef {'start' | 'playing' | 'respawning' | 'destroyed' | 'paused' | 'gameover'} Screen */
+/** Screen deadlines, as the tick at which each one is due (REQUIREMENTS.md 9).
+ * Pause stops the tick, so it stops every deadline with it (BR-22).
+ * @typedef {{ respawnAt: number, gameOverAt: number, enemySpawnAt: number, lockoutUntil: number }} Timers */
 /** @typedef {{
- *   screen: 'start' | 'playing' | 'paused' | 'gameover',
+ *   screen: Screen, resumeTo: 'playing' | 'respawning', pauseLocked: boolean, timers: Timers,
  *   tick: number, rng: number, nextId: number,
  *   tanks: Tank[], shells: Shell[], obstacles: Obstacle[],
  *   playerId: number, score: number, lives: number, level: number,
@@ -55,9 +63,13 @@ export function createWorld(seed, config) {
     reload: 0,
     graceTicks: 0,
     control: { type: 'player' },
+    tuning: null,
   };
   return {
     screen: 'start',
+    resumeTo: 'playing',
+    pauseLocked: false,
+    timers: { respawnAt: 0, gameOverAt: 0, enemySpawnAt: 0, lockoutUntil: 0 },
     tick: 0,
     rng: normaliseSeed(seed),
     nextId,

@@ -161,11 +161,14 @@ One plain, serialisable object. No classes, no closures, no references to the DO
  *   id: number, side: 'player' | 'enemy', kind: string,
  *   pos: Vec2, prevPos: Vec2, heading: number, prevHeading: number,
  *   alive: boolean, reload: number, graceTicks: number,
- *   control: { type: 'player' } | { type: 'ai', memory: object }
+ *   control: { type: 'player' } | { type: 'ai', memory: object },
+ *   tuning: { level: number, turnRateDeg: number, aimToleranceDeg: number, reloadTicks: number } | null
  * }} Tank */
-/** @typedef {{ id: number, ownerId: number, pos: Vec2, prevPos: Vec2, vel: Vec2, ticksLeft: number }} Shell */
+/** @typedef {{ id: number, ownerId: number, side: 'player' | 'enemy', pos: Vec2, prevPos: Vec2, vel: Vec2, ticksLeft: number }} Shell */
 /** @typedef {{
- *   screen: 'start' | 'playing' | 'paused' | 'gameover',
+ *   screen: 'start' | 'playing' | 'respawning' | 'destroyed' | 'paused' | 'gameover',
+ *   resumeTo: 'playing' | 'respawning', pauseLocked: boolean,
+ *   timers: { respawnAt: number, gameOverAt: number, enemySpawnAt: number, lockoutUntil: number },
  *   tick: number, rng: number, nextId: number,
  *   tanks: Tank[], shells: Shell[], obstacles: Obstacle[],
  *   playerId: number, score: number, lives: number, level: number,
@@ -174,6 +177,7 @@ One plain, serialisable object. No classes, no closures, no references to the DO
 ```
 
 - **Ground plane:** X and Z, with Y up. Heading 0 faces +Z; a positive turn is clockwise seen from above, towards +X.
+- **Screens and timers (D2):** Respawning and Destroyed are screens of their own, so the HUD and the overlays read one field. `resumeTo` is where Resume goes back to, and `pauseLocked` is the small-window lock of BR-25. Screen timers are deadlines in ticks; a paused game does not advance `tick`, so it holds every deadline (BR-22). An enemy's `tuning` is fixed at spawn (BR-17). A shell carries its owner's `side`, because the owner can be destroyed while the shell is still in flight.
 - **Tanks are a collection.** The player is the tank whose `id` is `playerId`. There is no `state.enemy` field anywhere. This is Product's Phase 2 constraint, and ADR 0004.
 - **`prevPos` and `prevHeading`** are copied at the start of each step, so the renderer can interpolate between steps (section 5.2).
 - **`events`** is cleared at the start of each step and filled during it: `shot` (either side; carries `tankId`), `shell-blocked`, `tank-hit`, `player-hit`, `enemy-spawned`, `enemy-aiming`, `level-up`, `game-over`. Audio, hit feedback and the test hook read them. The simulation never calls out to anything.

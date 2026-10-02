@@ -38,6 +38,7 @@ export const CONFIG = deepFreeze({
   shellSpeed: 80, // K-05, u/s
   shellRange: 200, // K-06, u
   playerReloadSeconds: 0.5, // K-26
+  muzzleDistance: 3.5, // u from the tank centre, outside K-07 (BR-07)
 
   // Score, lives and enemies
   startingLives: 3, // K-08

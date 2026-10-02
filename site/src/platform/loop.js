@@ -7,8 +7,9 @@ import { CONFIG } from '../core/config.js';
 /**
  * Adds one animation frame's elapsed time to the accumulator and says how
  * many whole simulation steps to run. Elapsed time is clamped to K-16, at
- * most `maxStepsPerFrame` steps run, and a frame that hits that cap drops
- * its backlog, so a slow machine slows down instead of spiralling.
+ * most `maxStepsPerFrame` steps run, and a frame that hits that cap with a
+ * whole step still owed drops its backlog, so a slow machine slows down
+ * instead of spiralling. A remainder under one step is always kept.
  * @param {number} acc milliseconds carried from the last frame
  * @param {number} elapsedMs milliseconds since the last frame
  * @returns {{ steps: number, acc: number, alpha: number }} alpha in [0, 1) is how far the render is past the last step
@@ -21,6 +22,6 @@ export function advance(acc, elapsedMs) {
     next -= CONFIG.stepMs;
     steps += 1;
   }
-  if (steps === CONFIG.maxStepsPerFrame) next = 0;
+  if (next >= CONFIG.stepMs) next = 0;
   return { steps, acc: next, alpha: next / CONFIG.stepMs };
 }

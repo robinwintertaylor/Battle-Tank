@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import { CONFIG } from '../../site/src/core/config.js';
 import { distance } from '../../site/src/core/math.js';
 import { normaliseSeed, nextRange } from '../../site/src/core/rng.js';
+import { newGame } from '../../site/src/core/rules.js';
 import { step } from '../../site/src/core/sim.js';
 import { createWorld } from '../../site/src/core/world.js';
 import { advance } from '../../site/src/platform/loop.js';
@@ -54,6 +55,12 @@ test('advance never runs more than five steps, whatever the backlog', () => {
   assert.equal(advance(10_000, 16).steps, 5);
 });
 
+test('a frame that just reaches the step cap keeps its remainder when no full step is still owed', () => {
+  const r = advance(0, 90); // 5 steps is 83.3 ms, 6.7 ms over
+  assert.equal(r.steps, CONFIG.maxStepsPerFrame);
+  close(r.acc, 90 - 5 * STEP);
+});
+
 test('a negative or non-finite frame interval runs nothing', () => {
   assert.deepEqual(advance(5, -100), { steps: 0, acc: 5, alpha: 5 / STEP });
   assert.deepEqual(advance(5, Number.NaN), { steps: 0, acc: 5, alpha: 5 / STEP });
@@ -67,6 +74,7 @@ test('a negative or non-finite frame interval runs nothing', () => {
  */
 function play(interval) {
   const state = createWorld(2024, CONFIG);
+  newGame(state, CONFIG);
   /** @param {number} tick */
   const script = (tick) => ({ throttle: tick % 240 < 150 ? 1 : -1, turn: Math.floor(tick / 75) % 3 - 1, firePressed: false, commands: [] });
   let acc = 0;
@@ -97,6 +105,7 @@ test('M10 jittery frame intervals give the same state as steady 60 Hz', () => {
 
 test('NFR-03 after a 5-second gap no tank moves more than K-16 worth of driving', () => {
   const state = createWorld(1, CONFIG);
+  state.screen = 'playing';
   const before = { ...state.tanks[0].pos };
   const r = advance(0, 5000);
   for (let i = 0; i < r.steps; i++) step(state, { throttle: 1, turn: 0, firePressed: false, commands: [] });
