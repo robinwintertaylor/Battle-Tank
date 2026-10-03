@@ -293,3 +293,17 @@ test('D7 the compressor guards against clipping and mute still silences everythi
   audio.setMuted(true);
   assert.equal(made[0].nodes[0].gain.value, 0, 'master is 0 and sits before the compressor');
 });
+
+test('D8 the output is a further 20% louder than D7, still compressed, explosion loudest', () => {
+  const { win, made } = fakeAudio();
+  const audio = createAudio(win);
+  audio.unlock();
+  const limiter = /** @type {any} */ (made[0].nodes.find((n) => n.kind === 'compressor'));
+  assert.ok(Math.abs(made[0].nodes[0].gain.value - 1.2) < 1e-9, 'master is 1.2, up 20% from 1.0');
+  assert.equal(limiter.ratio.value, 20, 'the compressor limits hard so overlapping sounds do not clip');
+  for (const [name, level] of Object.entries(LEVELS)) {
+    if (name !== 'explosion') assert.ok(level < LEVELS.explosion, `${name} stays below the explosion`);
+  }
+  audio.setMuted(true);
+  assert.equal(made[0].nodes[0].gain.value, 0, 'mute still silences everything');
+});

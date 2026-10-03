@@ -10,7 +10,7 @@
 /** @typedef {import('../core/math.js').Vec2} Vec2 */
 /** @typedef {'player-shot' | 'enemy-shot' | 'warning' | 'aiming' | 'explosion'} Sound */
 
-const MASTER_VOLUME = 1;
+const MASTER_VOLUME = 1.2;
 /** Peak level of each sound. The explosion is the loudest by design (UX_SPEC.md 12). */
 export const LEVELS = { 'player-shot': 0.75, 'enemy-shot': 0.45, warning: 0.4, aiming: 0.2, explosion: 1 };
 const NOISE_SECONDS = 1;
@@ -173,7 +173,7 @@ export function createAudio(win) {
             const limiter = ctx.createDynamicsCompressor();
             limiter.threshold.value = -12;
             limiter.knee.value = 10;
-            limiter.ratio.value = 12;
+            limiter.ratio.value = 20;
             limiter.attack.value = 0.003;
             limiter.release.value = 0.15;
             master.connect(limiter).connect(ctx.destination);
