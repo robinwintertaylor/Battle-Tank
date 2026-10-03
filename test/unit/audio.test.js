@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { setImmediate as nextTurn } from 'node:timers/promises';
-import { createAudio, panFor, soundFor } from '../../site/src/platform/audio.js';
+import { LEVELS, createAudio, panFor, soundFor } from '../../site/src/platform/audio.js';
 import { close, player, playing } from './support.js';
 
 /** An AudioParam that records its value and the automation calls made on it. */
@@ -75,6 +75,11 @@ function fakeAudio({ resume = () => Promise.resolve() } = {}) {
     }
     createGain() {
       return this.node('gain', { gain: param(1) });
+    }
+    createDynamicsCompressor() {
+      return this.node('compressor', {
+        threshold: param(-24), knee: param(30), ratio: param(12), attack: param(0.003), release: param(0.25),
+      });
     }
     createOscillator() {
       return this.node('oscillator', { type: 'sine', frequency: param(440) });
@@ -157,7 +162,9 @@ test('AC-11.1 once unlocked, a sound event starts sound through the master gain'
   const ctx = made[0];
   const master = ctx.nodes[0];
   assert.equal(master.kind, 'gain');
-  assert.ok(master.connections.includes(ctx.destination));
+  const limiter = /** @type {any} */ (ctx.nodes.find((n) => n.kind === 'compressor'));
+  assert.ok(master.connections.includes(limiter), 'master feeds the compressor');
+  assert.ok(limiter.connections.includes(ctx.destination), 'the compressor feeds the speakers');
   const { state } = playing();
   audio.play([], state);
   assert.equal(started(ctx), 0, 'no events, no sound');
@@ -266,4 +273,23 @@ test('BR-27 if Web Audio throws while playing, sound switches off and the game c
   audio.play(shot, state);
   assert.equal(made.length, 1, 'no new context is tried');
   assert.equal(made[0].closed, true, 'and the failed context is closed');
+});
+
+test('D7 the mix is louder than before, and the explosion is still louder than every tone', () => {
+  const tones = Object.entries(LEVELS).filter(([name]) => name !== 'explosion');
+  for (const [name, level] of tones) assert.ok(level < LEVELS.explosion, `${name} is quieter than the explosion`);
+  const { win, made } = fakeAudio();
+  createAudio(win).unlock();
+  assert.ok(made[0].nodes[0].gain.value > 0.6, 'master volume is above the old 0.6');
+  assert.ok(LEVELS.explosion >= 1 && LEVELS['player-shot'] > 0.5, 'sounds are louder than the old peaks');
+});
+
+test('D7 the compressor guards against clipping and mute still silences everything', () => {
+  const { win, made } = fakeAudio();
+  const audio = createAudio(win);
+  audio.unlock();
+  const limiter = /** @type {any} */ (made[0].nodes.find((n) => n.kind === 'compressor'));
+  assert.ok(limiter.threshold.value < 0 && limiter.ratio.value >= 8, 'a firm compressor');
+  audio.setMuted(true);
+  assert.equal(made[0].nodes[0].gain.value, 0, 'master is 0 and sits before the compressor');
 });

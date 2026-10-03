@@ -10,7 +10,9 @@
 /** @typedef {import('../core/math.js').Vec2} Vec2 */
 /** @typedef {'player-shot' | 'enemy-shot' | 'warning' | 'aiming' | 'explosion'} Sound */
 
-const MASTER_VOLUME = 0.6;
+const MASTER_VOLUME = 1;
+/** Peak level of each sound. The explosion is the loudest by design (UX_SPEC.md 12). */
+export const LEVELS = { 'player-shot': 0.75, 'enemy-shot': 0.45, warning: 0.4, aiming: 0.2, explosion: 1 };
 const NOISE_SECONDS = 1;
 
 /**
@@ -86,7 +88,7 @@ function explosion(ctx, out, noise) {
   filter.type = 'lowpass';
   filter.frequency.setValueAtTime(2400, t);
   filter.frequency.exponentialRampToValueAtTime(80, t + seconds);
-  env.gain.setValueAtTime(1, t);
+  env.gain.setValueAtTime(LEVELS.explosion, t);
   env.gain.exponentialRampToValueAtTime(0.0001, t + seconds);
   src.connect(filter).connect(env).connect(out);
   src.start(t);
@@ -125,7 +127,7 @@ export function createAudio(win) {
     if (!ctx || !master || !noise) return;
     switch (sound) {
       case 'player-shot':
-        tone(ctx, master, { wave: 'triangle', from: 150, to: 50, peak: 0.5, seconds: 0.15 });
+        tone(ctx, master, { wave: 'triangle', from: 150, to: 50, peak: LEVELS['player-shot'], seconds: 0.15 });
         break;
       case 'enemy-shot': {
         const shooter = tankById(state, event.tankId);
@@ -138,15 +140,15 @@ export function createAudio(win) {
           panner.connect(master);
           out = panner;
         }
-        tone(ctx, out, { wave: 'triangle', from: 320, to: 140, peak: 0.3, seconds: 0.1 });
+        tone(ctx, out, { wave: 'triangle', from: 320, to: 140, peak: LEVELS['enemy-shot'], seconds: 0.1 });
         break;
       }
       case 'warning':
-        tone(ctx, master, { wave: 'sine', from: 500, to: 1000, peak: 0.25, seconds: 0.3 });
+        tone(ctx, master, { wave: 'sine', from: 500, to: 1000, peak: LEVELS.warning, seconds: 0.3 });
         break;
       case 'aiming':
-        tone(ctx, master, { wave: 'square', from: 1200, to: 1200, peak: 0.12, seconds: 0.05 });
-        tone(ctx, master, { wave: 'square', from: 1200, to: 1200, peak: 0.12, seconds: 0.05, delay: 0.1 });
+        tone(ctx, master, { wave: 'square', from: 1200, to: 1200, peak: LEVELS.aiming, seconds: 0.05 });
+        tone(ctx, master, { wave: 'square', from: 1200, to: 1200, peak: LEVELS.aiming, seconds: 0.05, delay: 0.1 });
         break;
       case 'explosion':
         explosion(ctx, master, noise);
@@ -167,7 +169,17 @@ export function createAudio(win) {
           ctx = new Ctor();
           master = ctx.createGain();
           master.gain.value = muted ? 0 : MASTER_VOLUME;
-          master.connect(ctx.destination);
+          if (ctx.createDynamicsCompressor) {
+            const limiter = ctx.createDynamicsCompressor();
+            limiter.threshold.value = -12;
+            limiter.knee.value = 10;
+            limiter.ratio.value = 12;
+            limiter.attack.value = 0.003;
+            limiter.release.value = 0.15;
+            master.connect(limiter).connect(ctx.destination);
+          } else {
+            master.connect(ctx.destination);
+          }
           const length = Math.round(ctx.sampleRate * NOISE_SECONDS);
           noise = ctx.createBuffer(1, length, ctx.sampleRate);
           const data = noise.getChannelData(0);
