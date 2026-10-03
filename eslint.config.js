@@ -88,6 +88,23 @@ export default [
   },
   {
     files: ['test/e2e/**/*.js'],
-    languageOptions: { globals: { ...nodeGlobals, document: 'readonly', window: 'readonly' } },
+    // The page.evaluate callbacks run in the browser, so these are real there.
+    languageOptions: {
+      globals: {
+        ...nodeGlobals,
+        ...Object.fromEntries(
+          ['document', 'window', 'location', 'localStorage', 'sessionStorage', 'indexedDB', 'caches', 'navigator', 'getComputedStyle',
+            'KeyboardEvent', 'Event', 'MutationObserver', 'addEventListener', 'scrollX', 'scrollY', 'innerWidth', 'innerHeight', 'matchMedia'].map((n) => [n, 'readonly']),
+        ),
+      },
+    },
+    // LINT-03 (NFR-13): the end-to-end suite may not use the mouse or touch,
+    // so every scenario proves keyboard-only play.
+    rules: {
+      'no-restricted-syntax': ['error',
+        { selector: "MemberExpression[property.name=/^(click|dblclick|hover|tap|mouse|touchscreen)$/]", message: 'No mouse or touch in e2e tests (LINT-03). Use the keyboard.' },
+        { selector: "MemberExpression[computed=true][property.value=/^(click|dblclick|hover|tap|mouse|touchscreen)$/]", message: 'No mouse or touch in e2e tests (LINT-03). Use the keyboard.' },
+      ],
+    },
   },
 ];
