@@ -13,6 +13,7 @@
     "lint": "eslint .",
     "typecheck": "tsc -p jsconfig.json && tsc -p jsconfig.node.json",
     "size": "node scripts/check-size.js",
+    "smoke": "node scripts/smoke.js",
     "serve": "node scripts/serve.js",
     "test:e2e": "playwright test",
     "check": "npm run lint && npm run typecheck && npm test && npm run size",
