@@ -304,7 +304,10 @@ test.describe('E2E-07 pause, auto-pause and held keys', () => {
 });
 
 test.describe('E2E-08 audio and mute', () => {
-  test('no audio before the first key; sound plays after it; M silences and restores (AC-01.4, AC-11.1 to AC-11.3, AC-12.1 to AC-12.3, BR-23)', async ({ page }) => {
+  test('no audio before the first key; sound plays after it; M silences and restores (AC-01.4, AC-11.1 to AC-11.3, AC-12.1 to AC-12.3, BR-23)', async ({ page, browserName }) => {
+    // The ubuntu runner has no audio device, so headless Firefox leaves the AudioContext
+    // suspended for good (CI runs 37141233387 and 37228074324). Chromium covers it in CI; Firefox still runs it locally.
+    test.skip(browserName === 'firefox' && Boolean(process.env.CI), 'No audio device on the CI runner: Firefox cannot resume the AudioContext.');
     await open(page);
     test.skip(await page.evaluate(() => typeof AudioContext === 'undefined'), 'No Web Audio in this engine build (TEST_STRATEGY 3.2.1 rule 4); Linux CI runs it.');
     /** @param {number} ms */
