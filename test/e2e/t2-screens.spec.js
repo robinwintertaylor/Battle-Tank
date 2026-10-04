@@ -272,8 +272,14 @@ test.describe('E2E-25 window too small', () => {
     await open(page);
     await startGame(page);
     await page.setViewportSize({ width: 639, height: 400 });
-    await page.clock.runFor(100);
-    expect((await snap(page)).screen).toBe('paused');
+    // The resize event reaches the page a little after setViewportSize returns on Linux CI,
+    // so give the game a few ticks to see it instead of reading the screen once.
+    await expect
+      .poll(async () => {
+        await page.clock.runFor(100);
+        return (await snap(page)).screen;
+      })
+      .toBe('paused');
     await expect(page.locator('#wt-paused-small')).toBeVisible();
     await expect(page.locator('#wt-paused-small')).toHaveText('Make the window larger to keep playing.');
     await expect(page.locator('#wt-resume')).toBeDisabled();

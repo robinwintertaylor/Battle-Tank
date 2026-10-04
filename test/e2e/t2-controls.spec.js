@@ -316,10 +316,15 @@ test.describe('E2E-08 audio and mute', () => {
     expect((await audio()).contexts).toBe(0);
 
     await startGame(page); // the first key press
-    await idle(100);
+    // resume() is asynchronous and headless Firefox on Linux is slow to start its audio stream.
+    await expect
+      .poll(async () => {
+        await idle(100);
+        return (await audio()).state;
+      }, { timeout: 10_000 })
+      .toBe('running');
     let a = await audio();
     expect(a.contexts).toBe(1);
-    expect(a.state).toBe('running');
 
     // A shot makes a sound.
     const s0 = a.sources;
