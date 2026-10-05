@@ -3,79 +3,7 @@
 // the Error (E2E-24) and Keyboard needed (E2E-23) overlays, against the IDs
 // in index.html. Game time is driven by page.clock.runFor (spike T1 rule 1).
 import { expect, test } from '@playwright/test';
-
-const SEED = 12345;
-const OVERLAYS = ['wt-start', 'wt-paused', 'wt-gameover', 'wt-keyboard', 'wt-error'];
-
-/**
- * Installs the clock, the test hook, a CSP-violation recorder and an
- * opt-in canvas fault, then loads the page and runs the first frames.
- * @param {import('@playwright/test').Page} page
- * @param {{ hook?: boolean }} [opts]
- */
-async function open(page, { hook = true } = {}) {
-  /** @type {string[]} */
-  const errors = [];
-  page.on('console', (msg) => {
-    if (msg.type() === 'error') errors.push(msg.text());
-  });
-  page.on('pageerror', (err) => errors.push(err.message));
-  /** @type {string[]} */
-  const lateRequests = [];
-  // Counted from when goto() resolves, i.e. after the page's load event.
-  // (Firefox fires a load for the initial about:blank, so page.on('load')
-  // cannot be used for this.)
-  let loaded = false;
-  page.on('request', (req) => {
-    if (loaded) lateRequests.push(req.url());
-  });
-
-  await page.clock.install();
-  await page.addInitScript(
-    ({ seed, hook: withHook }) => {
-      const w = /** @type {any} */ (window);
-      if (withHook) w.__WT_TEST__ = { seed };
-      w.__cspViolations = [];
-      document.addEventListener('securitypolicyviolation', (e) => w.__cspViolations.push(e.violatedDirective));
-      // E2E-24: a canvas call throws once the test sets __wtBoom.
-      const proto = w.CanvasRenderingContext2D.prototype;
-      const stroke = proto.stroke;
-      /** @param {any[]} args */
-      proto.stroke = function (...args) {
-        if (w.__wtBoom) throw new Error('E2E-24 injected canvas fault');
-        return stroke.apply(this, args);
-      };
-    },
-    { seed: SEED, hook },
-  );
-  await page.goto('./');
-  loaded = true;
-  // install() leaves the fake clock running in wall time, so slow engines
-  // (WebKit) would tick the game between steps. Pause it: only runFor moves time.
-  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
-  await page.clock.runFor(200);
-  return { errors, lateRequests };
-}
-
-/** @param {import('@playwright/test').Page} page */
-const snap = (page) => page.evaluate(() => /** @type {any} */ (window).__WT_TEST__.snapshot());
-/** @param {import('@playwright/test').Page} page */
-const focusedId = (page) => page.evaluate(() => document.activeElement?.id ?? null);
-/** @param {import('@playwright/test').Page} page */
-const visibleOverlays = (page) =>
-  page.evaluate((ids) => ids.filter((id) => !(/** @type {HTMLElement} */ (document.getElementById(id))).hidden), OVERLAYS);
-
-/**
- * Runs game time in slices until the snapshot's screen matches, or fails.
- * @param {import('@playwright/test').Page} page @param {string} screen @param {number} maxMs
- */
-async function runUntil(page, screen, maxMs) {
-  for (let t = 0; t < maxMs; t += 500) {
-    if ((await snap(page)).screen === screen) return t;
-    await page.clock.runFor(500);
-  }
-  throw new Error(`screen never became ${screen} within ${maxMs} ms; it is ${(await snap(page)).screen}`);
-}
+import { focusedId, open, runUntil, snap, visibleOverlays } from './support.js';
 
 test.describe('D5 overlay flow', () => {
   test.setTimeout(240_000);
@@ -156,7 +84,9 @@ test.describe('D5 overlay flow', () => {
     await page.keyboard.press('Escape');
     await page.clock.runFor(100);
     expect((await snap(page)).screen).toBe('paused');
-    await page.locator('#wt-resume').click();
+    await page.keyboard.press('Tab');
+    expect(await focusedId(page)).toBe('wt-resume');
+    await page.keyboard.press('Space');
     await page.clock.runFor(100);
     // An enemy hit during play can leave the player respawning, which is in play too.
     expect(['playing', 'respawning']).toContain((await snap(page)).screen);
@@ -164,14 +94,18 @@ test.describe('D5 overlay flow', () => {
     // Quit to title from the pause dialog (AC-10.8).
     await page.keyboard.press('KeyP');
     await page.clock.runFor(100);
-    await page.locator('#wt-quit').click();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    expect(await focusedId(page)).toBe('wt-quit');
+    await page.keyboard.press('Space');
     await page.clock.runFor(100);
     expect((await snap(page)).screen).toBe('start');
     expect(await visibleOverlays(page)).toEqual(['wt-start']);
     expect(await focusedId(page)).toBe('wt-start-button');
 
     // Start again with the button, then sit idle until Game over.
-    await page.locator('#wt-start-button').click();
+    expect(await focusedId(page)).toBe('wt-start-button');
+    await page.keyboard.press('Space');
     await page.clock.runFor(100);
     expect((await snap(page)).screen).toBe('playing');
     const idleMs = await runUntil(page, 'gameover', 60_000);
@@ -195,7 +129,7 @@ test.describe('D5 overlay flow', () => {
     expect(await focusedId(page)).toBe('wt-again');
 
     // Play again restarts with score and lives reset, no reload (AC-09.6).
-    await page.locator('#wt-again').click();
+    await page.keyboard.press('Space');
     await page.clock.runFor(100);
     s = await snap(page);
     expect(s.screen).toBe('playing');
@@ -207,7 +141,9 @@ test.describe('D5 overlay flow', () => {
     // Second game over, then the Title screen button (AC-09.8).
     await runUntil(page, 'gameover', 60_000);
     await page.clock.runFor(1100);
-    await page.locator('#wt-title').click();
+    await page.keyboard.press('Tab');
+    expect(await focusedId(page)).toBe('wt-title');
+    await page.keyboard.press('Space');
     await page.clock.runFor(100);
     expect((await snap(page)).screen).toBe('start');
     expect(await visibleOverlays(page)).toEqual(['wt-start']);
@@ -275,7 +211,7 @@ test.describe('D5 overlay flow', () => {
     await page.evaluate(() => {
       /** @type {any} */ (window).__beforeReload = true;
     });
-    await Promise.all([page.waitForEvent('load'), page.locator('#wt-reload').click()]);
+    await Promise.all([page.waitForEvent('load'), page.keyboard.press('Space')]);
     await page.clock.runFor(200);
     expect(await page.evaluate(() => /** @type {any} */ (window).__beforeReload ?? false)).toBe(false);
     expect(await visibleOverlays(page)).toEqual(['wt-start']);
