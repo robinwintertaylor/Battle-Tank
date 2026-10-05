@@ -24,7 +24,7 @@
     "@axe-core/playwright": "4.13.0",
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.63.0",
-    "@types/node": "24.19.1",
+    "@types/node": "26.6.4",
     "eslint": "10.11.0",
     "typescript": "7.0.2"
   }
